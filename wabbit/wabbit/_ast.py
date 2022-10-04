@@ -25,32 +25,46 @@ class Node(BaseModel):
     """
 
 
+class Statement(Node):
+    """Used to label the node is a statement rather than an expression."""
+
+
+class Expression(Node):
+    """Used to label the node is an expression rather than a statement."""
+
+
+# TODO(povilas): Statement
 class PrintStatement(Node):
     """e.g. `print 123;"""
 
+    # TODO(povilas): expression
     value: Node
 
 
-class Integer(Node):
+class Integer(Expression):
     """e.g. `123`"""
 
     value: str
 
 
-class Float(Node):
+class Float(Expression):
     """e.g. `1.0`"""
 
     value: str
 
 
-class Boolean(Node):
+class Boolean(Expression):
     value: bool
+
+
+class Type(Node):
+    name: t.Literal["int"] | t.Literal["float"] | t.Literal["bool"] | t.Literal["char"]
 
 
 # TODO(povilas): do I want to restrict possible node types in the AST declaration?
 # e.g. Integer | Float
 # Or is this more of a job to a type checker?
-class BinOp(Node):
+class BinOp(Expression):
     """Binary operation."""
 
     operation: t.Literal["+"] | t.Literal["-"] | t.Literal["*"] | t.Literal["/"]
@@ -106,9 +120,8 @@ class VarDecl(Node):
     """Variable declaration."""
 
     specifier: t.Literal["const"] | t.Literal["var"]
-    # TODO(povilas): wrap it with a node Name()
-    name: str
-    type_: str | None = None
+    name: Name
+    type_: Type | None = None
     """Type is optional, e.g. when it is inferred:
 
     ```
@@ -117,15 +130,71 @@ class VarDecl(Node):
     """
 
 
-class Assignment(Node):
+class Assignment(Expression):
     left: Node
     right: Node
 
 
-class IfElse(Node):
+class IfElse(Statement):
     test: Node
-    body: list[Node] | None = None
+    body: list[Node] = []
     else_body: list[Node] | None = None
+
+
+class While(Statement):
+    test: LogicalOp | Boolean
+    body: list[Node] = []
+
+
+class Break(Statement):
+    """Just a placeholder for the `break;` statement."""
+
+    pass
+
+
+class Continue(Statement):
+    """Just a placeholder for the `continue;` statement."""
+
+    pass
+
+
+class Block(Node):
+    """A container for multiple statements/expressions."""
+
+    # TODO(povilas): pydantic does some unexpected type guessing and say
+    # Assignment(Expression) becomes a Statement.
+    # nodes: list[Statement | Expression]
+    nodes: list[Node]
+
+
+class FuncArg(Node):
+    """Encodes single function argument:
+
+        `x int`
+
+    e.g. in `func add(x int, y int) int`
+    """
+
+    name: Name
+    type_: Type
+
+
+class FuncDef(Statement):
+    name: Name
+    args: list[FuncArg]
+    return_type: Type
+    body: list[Node] = []
+
+
+class Return(Statement):
+    """Function return statement."""
+
+    value: Expression
+
+
+class FuncCall(Expression):
+    name: Name
+    args: list[Expression]
 
 
 # TODO(povilas): optionally retain comments: for reformatting and automated refactoring

@@ -8,9 +8,10 @@ from ._ast import *
 
 _logger = logging.getLogger()
 
+_INDENT_SPACES: t.Final[int] = 4
 
-# TODO(povilas): take indentation into consideration for functions and if blocks
-def format(node: Node, add_semicolon: bool = True, indent_level: int = 0) -> str:
+
+def format(node: Node, indent_level: int = 0, add_semicolon: bool = True) -> str:
     src = ""
     match node:
         case PrintStatement(value=inner_node):
@@ -40,54 +41,71 @@ def format(node: Node, add_semicolon: bool = True, indent_level: int = 0) -> str
             src = f"{format(left, add_semicolon=False)} = {format(right)};"
 
         case VarDecl(specifier=spec, name=name, type_=type_):
-            type_suffix = f" {type_}" if type_ else ""
+            type_suffix = f" {type_.name}" if type_ else ""
             maybe_semicolon = ";" if add_semicolon else ""
-            src = f"{spec} {name}{type_suffix}{maybe_semicolon}"
+            src = f"{spec} {name.value}{type_suffix}{maybe_semicolon}"
 
-        case IfElse(test=test, body=exec_body):
+        case IfElse(test=test, body=exec_body, else_body=else_body):
             lines = [
                 f"if {format(test)} {{",
             ]
-            lines += [
-                format(node, indent_level=indent_level + 1)
-                for node in (exec_body or [])
+            lines += [format(node, indent_level=indent_level + 1) for node in exec_body]
+
+            if else_body is not None:
+                lines.append(_indent("} else {", indent_level))
+                lines += [
+                    format(node, indent_level=indent_level + 1)
+                    for node in (else_body or [])
+                ]
+
+            lines.append(_indent("}", indent_level))
+            src = "\n".join(lines)
+
+        case While(test=test, body=exec_body):
+            lines = [
+                f"while {format(test)} {{",
             ]
+            lines += [format(node, indent_level=indent_level + 1) for node in exec_body]
             lines.append("}")
             src = "\n".join(lines)
+
+        case Break():
+            src = "break;"
+
+        case Continue():
+            src = "continue;"
+
+        case Block(nodes=nodes):
+            lines = [format(n, indent_level) for n in nodes]
+            src = "\n".join(lines)
+
+        case FuncDef(
+            name=Name(value=func_name),
+            args=args,
+            return_type=Type(name=return_type),
+            body=body,
+        ):
+            formatted_args = ", ".join([format(arg) for arg in args])
+            lines = [f"func {func_name}({formatted_args}) {return_type} {{"]
+            lines += [format(node, indent_level=indent_level + 1) for node in body]
+            lines.append("}")
+            src = "\n".join(lines)
+
+        case FuncArg(name=Name(value=arg_name), type_=Type(name=arg_type)):
+            src = f"{arg_name} {arg_type}"
+
+        case Return(value=ret_expr):
+            src = f"return {format(ret_expr)};"
+
+        case FuncCall(name=Name(value=func_name), args=args):
+            formatted_args = ", ".join(format(arg) for arg in args)
+            src = f"{func_name}({formatted_args})"
 
         case _:
             _logger.warning("Unsupported node type: %s", type(node))
 
-    return " " * indent_level * 4 + src
+    return _indent(src, indent_level)
 
 
-class _Lines:
-    """Helps to deal with indentation
-
-    ```py
-    with lines.indent():
-        lines.append("indented")
-    """
-
-    indent_spaces: t.ClassVar[int] = 4
-
-    def __init__(self) -> None:
-        self._inner: list[str] = []
-        self._indent_level: int = 0
-
-    def __enter__(self) -> "_Lines":
-        self._indent_level += 1
-        return self
-
-    def __exit__(self, exception_type, exception_value, traceback) -> None:
-        self._indent_level -= 1
-
-    def append(self, text: str) -> None:
-        self._inner.append(" " * self._indent_level * self.indent_spaces + text)
-
-    def indent(self) -> "_Lines":
-        return self
-
-    def __str__(self) -> str:
-        """Format lines with indentation."""
-        return "\n".join(self._inner)
+def _indent(src: str, indent_level: int) -> str:
+    return " " * indent_level * _INDENT_SPACES + src

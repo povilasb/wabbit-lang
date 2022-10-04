@@ -1,90 +1,274 @@
 from ._ast import *
 from ._format import format
 
-# TODO(povilas): make this into a test suite
-statements = [
-    PrintStatement(value=Integer(value="42")),
-    PrintStatement(value=BinOp.add(Integer(value="2"), Integer(value="3"))),
-    PrintStatement(
-        value=BinOp.add(
-            UnaryOp(operation="-", operand=Integer(value="2")), Integer(value="3")
-        )
-    ),
-    PrintStatement(
-        value=BinOp.add(
-            Integer(value="2"),
-            BinOp.mul(Integer(value="3"), Integer(value="-4")),
-        )
-    ),
-    PrintStatement(
-        value=BinOp.mul(
-            ParenExpr(
+
+def main() -> None:
+    tests = [
+        (PrintStatement(value=Integer(value="42")), "print 42;"),
+        (
+            PrintStatement(value=BinOp.add(Integer(value="2"), Integer(value="3"))),
+            "print 2 + 3;",
+        ),
+        (
+            PrintStatement(
                 value=BinOp.add(
-                    Integer(value="2"),
+                    UnaryOp(operation="-", operand=Integer(value="2")),
                     Integer(value="3"),
                 )
             ),
-            Integer(value="4"),
-        )
-    ),
-    PrintStatement(
-        value=BinOp.sub(
-            Float(value="2.0"),
-            BinOp.div(Float(value="3.0"), Float(value="4.0")),
-        )
-    ),
-    Assignment(
-        left=VarDecl(specifier="const", name="pi"), right=Float(value="3.14159")
-    ),
-    Assignment(
-        left=VarDecl(specifier="const", name="tau"),
-        right=BinOp.mul(Float(value="2.0"), Name(value="pi")),
-    ),
-    Assignment(left=VarDecl(specifier="var", name="radius"), right=Float(value="4.0")),
-    VarDecl(specifier="var", name="perimeter", type_="float"),
-    Assignment(
-        left=Name(value="perimeter"),
-        right=BinOp.mul(Name(value="tau"), Name(value="radius")),
-    ),
-    PrintStatement(value=Name(value="perimeter")),
-    Assignment(
-        left=VarDecl(specifier="var", name="v1", type_="int"), right=Integer(value="4")
-    ),
-    PrintStatement(value=UnaryOp(operation="-", operand=Name(value="x"))),
-    PrintStatement(value=Boolean(value=True)),
-    PrintStatement(
-        value=LogicalOp(
-            operation="==", left=Integer(value="1"), right=Integer(value="2")
-        )
-    ),
-    PrintStatement(
-        value=LogicalOp(
-            operation="<", left=Integer(value="0"), right=Integer(value="1")
-        )
-    ),
-    PrintStatement(
-        value=LogicalOp(
-            operation=">", left=Integer(value="1"), right=Integer(value="0")
-        )
-    ),
-    PrintStatement(
-        value=LogicalOp(
-            operation="&&", left=Boolean(value=True), right=Boolean(value=True)
-        )
-    ),
-    PrintStatement(
-        value=LogicalOp(
-            operation="||", left=Boolean(value=False), right=Boolean(value=True)
-        )
-    ),
-    PrintStatement(value=UnaryOp(operation="!", operand=Boolean(value=False))),
-    IfElse(
-        test=LogicalOp(operation="<", left=Name(value="a"), right=Name(value="b")),
-        body=[Assignment(left=Name(value="minval"), right=Name(value="a"))],
-    ),
-]
+            "print -2 + 3;",
+        ),
+        (
+            PrintStatement(
+                value=BinOp.add(
+                    Integer(value="2"),
+                    BinOp.mul(Integer(value="3"), Integer(value="-4")),
+                )
+            ),
+            "print 2 + 3 * -4;",
+        ),
+        (
+            PrintStatement(
+                value=BinOp.mul(
+                    ParenExpr(
+                        value=BinOp.add(
+                            Integer(value="2"),
+                            Integer(value="3"),
+                        )
+                    ),
+                    Integer(value="4"),
+                )
+            ),
+            "print (2 + 3) * 4;",
+        ),
+        (
+            PrintStatement(
+                value=BinOp.sub(
+                    Float(value="2.0"),
+                    BinOp.div(Float(value="3.0"), Float(value="4.0")),
+                )
+            ),
+            "print 2.0 - 3.0 / 4.0;",
+        ),
+        (PrintStatement(value=Name(value="perimeter")), "print perimeter;"),
+        (
+            PrintStatement(value=UnaryOp(operation="-", operand=Name(value="x"))),
+            "print -x;",
+        ),
+        (PrintStatement(value=Boolean(value=True)), "print true;"),
+        (
+            PrintStatement(
+                value=LogicalOp(
+                    operation="==", left=Integer(value="1"), right=Integer(value="2")
+                )
+            ),
+            "print 1 == 2;",
+        ),
+        (
+            PrintStatement(
+                value=LogicalOp(
+                    operation="<", left=Integer(value="0"), right=Integer(value="1")
+                )
+            ),
+            "print 0 < 1;",
+        ),
+        (
+            PrintStatement(
+                value=LogicalOp(
+                    operation=">", left=Integer(value="1"), right=Integer(value="0")
+                )
+            ),
+            "print 1 > 0;",
+        ),
+        (
+            PrintStatement(
+                value=LogicalOp(
+                    operation="&&", left=Boolean(value=True), right=Boolean(value=True)
+                )
+            ),
+            "print true && true;",
+        ),
+        (
+            PrintStatement(
+                value=LogicalOp(
+                    operation="||", left=Boolean(value=False), right=Boolean(value=True)
+                )
+            ),
+            "print false || true;",
+        ),
+        (
+            PrintStatement(value=UnaryOp(operation="!", operand=Boolean(value=False))),
+            "print !false;",
+        ),
+        (
+            Assignment(
+                left=Name(value="perimeter"),
+                right=BinOp.mul(Name(value="tau"), Name(value="radius")),
+            ),
+            # TODO(povilas): assignment is actually an expression and thus we don't
+            # always want to append ';':
+            #   func1(res = x * y);
+            "perimeter = tau * radius;",
+        ),
+        (
+            VarDecl(
+                specifier="var", name=Name(value="perimeter"), type_=Type(name="float")
+            ),
+            "var perimeter float;",
+        ),
+        (
+            Assignment(
+                left=VarDecl(
+                    specifier="var", name=Name(value="v1"), type_=Type(name="int")
+                ),
+                right=Integer(value="4"),
+            ),
+            "var v1 int = 4;",
+        ),
+        (
+            Assignment(
+                left=VarDecl(specifier="const", name=Name(value="pi")),
+                right=Float(value="3.14159"),
+            ),
+            "const pi = 3.14159;",
+        ),
+        (
+            Assignment(
+                left=VarDecl(specifier="const", name=Name(value="tau")),
+                right=BinOp.mul(Float(value="2.0"), Name(value="pi")),
+            ),
+            "const tau = 2.0 * pi;",
+        ),
+        (
+            Assignment(
+                left=VarDecl(specifier="var", name=Name(value="radius")),
+                right=Float(value="4.0"),
+            ),
+            "var radius = 4.0;",
+        ),
+        (
+            IfElse(
+                test=LogicalOp(
+                    operation="<", left=Name(value="a"), right=Name(value="b")
+                ),
+                body=[Assignment(left=Name(value="minval"), right=Name(value="a"))],
+                else_body=[
+                    Assignment(left=Name(value="minval"), right=Name(value="b"))
+                ],
+            ),
+            """if a < b {
+    minval = a;
+} else {
+    minval = b;
+}""",
+        ),
+        (
+            While(
+                test=LogicalOp(
+                    operation="<", left=Name(value="x"), right=Integer(value="11")
+                ),
+                body=[
+                    Assignment(
+                        left=Name(value="fact"),
+                        right=BinOp.mul(Name(value="fact"), Name(value="x")),
+                    ),
+                    PrintStatement(value=Name(value="fact")),
+                ],
+            ),
+            """while x < 11 {
+    fact = fact * x;
+    print fact;
+}""",
+        ),
+        (
+            While(
+                test=Boolean(value=True),
+                body=[
+                    IfElse(
+                        test=LogicalOp(
+                            operation="==",
+                            left=Name(value="n"),
+                            right=Integer(value="0"),
+                        ),
+                        body=[Break()],
+                        else_body=[
+                            PrintStatement(value=Name(value="n")),
+                            Assignment(
+                                left=Name(value="n"),
+                                right=BinOp.sub(Name(value="n"), Integer(value="1")),
+                            ),
+                            Continue(),
+                        ],
+                    ),
+                    Assignment(
+                        left=Name(value="n"),
+                        right=BinOp.add(Name(value="n"), Integer(value="1")),
+                    ),
+                ],
+            ),
+            """while true {
+    if n == 0 {
+        break;
+    } else {
+        print n;
+        n = n - 1;
+        continue;
+    }
+    n = n + 1;
+}""",
+        ),
+        (
+            Block(
+                nodes=[
+                    FuncDef(
+                        name=Name(value="add"),
+                        args=[
+                            FuncArg(name=Name(value="x"), type_=Type(name="int")),
+                            FuncArg(name=Name(value="y"), type_=Type(name="int")),
+                        ],
+                        return_type=Type(name="int"),
+                        body=[
+                            Return(value=BinOp.add(Name(value="x"), Name(value="y")))
+                        ],
+                    ),
+                    Assignment(
+                        left=VarDecl(specifier="var", name=Name(value="result")),
+                        right=FuncCall(
+                            name=Name(value="add"),
+                            args=[Integer(value="2"), Integer(value="3")],
+                        ),
+                    ),
+                ]
+            ),
+            """func add(x int, y int) int {
+    return x + y;
+}
+var result = add(2, 3);""",
+        ),
+    ]
+
+    for ast, expected_code in tests:
+        _test_format(ast, expected_code, verbose=True)
 
 
-for s in statements:
-    print(format(s))
-    print()
+def _test_format(ast: Node, expected_code: str, verbose: bool = False) -> None:
+    generated_code = format(ast)
+    if generated_code != expected_code:
+        # TODO(povilas): colors
+        print("\n!!!!!! Test failed: !!!!!!")
+        print("\n        Expected code")
+        print("|--------------------------------|")
+        print(expected_code)
+        print("|--------------------------------|")
+        print("\n        Generated code")
+        print("|--------------------------------|")
+        print(generated_code)
+        print("|--------------------------------|")
+
+    elif verbose:
+        print()
+        print(generated_code)
+
+
+if __name__ == "__main__":
+    main()
