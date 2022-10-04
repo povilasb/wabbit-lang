@@ -33,12 +33,10 @@ class Expression(Node):
     """Used to label the node is an expression rather than a statement."""
 
 
-# TODO(povilas): Statement
-class PrintStatement(Node):
+class PrintStatement(Statement):
     """e.g. `print 123;"""
 
-    # TODO(povilas): expression
-    value: Node
+    value: Expression
 
 
 class Integer(Expression):
@@ -88,12 +86,12 @@ class BinOp(Expression):
         return cls(left=l, right=r, operation="/")
 
 
-class UnaryOp(Node):
+class UnaryOp(Expression):
     operation: t.Literal["-"] | t.Literal["!"]
     operand: Node
 
 
-class LogicalOp(Node):
+class LogicalOp(Expression):
     operation: t.Literal["=="] | t.Literal[">"] | t.Literal["<"] | t.Literal[
         "&&"
     ] | t.Literal["||"]
@@ -101,7 +99,7 @@ class LogicalOp(Node):
     right: Node
 
 
-class ParenExpr(Node):
+class ParenExpr(Expression):
     """Parenthesis around expression.
 
     e.g. `(1)`
@@ -110,13 +108,13 @@ class ParenExpr(Node):
     value: Node
 
 
-class Name(Node):
+class Name(Expression):
     """Either function or variable name."""
 
     value: str
 
 
-class VarDecl(Node):
+class VarDecl(Statement):
     """Variable declaration."""
 
     specifier: t.Literal["const"] | t.Literal["var"]
@@ -179,7 +177,7 @@ class FuncArg(Node):
     type_: Type
 
 
-class FuncDef(Statement):
+class FuncDef(Node):
     name: Name
     args: list[FuncArg]
     return_type: Type
