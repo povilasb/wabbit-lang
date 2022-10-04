@@ -1,111 +1,122 @@
 """Formats source code from AST."""
 
 import typing as t
-import logging
 
 from ._ast import *
 
 
-_logger = logging.getLogger()
-
 _INDENT_SPACES: t.Final[int] = 4
 
 
-def format(node: Node, indent_level: int = 0, add_semicolon: bool = True) -> str:
-    src = ""
-    match node:
-        case PrintStatement(value=inner_node):
-            src = f"print {format(inner_node)};"
-
-        case Integer(value=val) | Float(value=val):
-            src = f"{val}"
-
-        case Boolean(value=val):
-            src = "true" if val else "false"
-
-        case Name(value=name):
-            src = name
-
-        case BinOp(operation=op, left=left, right=right) | LogicalOp(
-            operation=op, left=left, right=right
-        ):
-            src = f"{format(left)} {op} {format(right)}"
-
-        case UnaryOp(operation=op, operand=operand):
-            src = f"{op}{format(operand)}"
-
-        case ParenExpr(value=val):
-            src = f"({format(val)})"
-
-        case Assignment(left=left, right=right):
-            src = f"{format(left, add_semicolon=False)} = {format(right)};"
-
-        case VarDecl(specifier=spec, name=name, type_=type_):
-            type_suffix = f" {type_.name}" if type_ else ""
-            maybe_semicolon = ";" if add_semicolon else ""
-            src = f"{spec} {name.value}{type_suffix}{maybe_semicolon}"
-
-        case IfElse(test=test, body=exec_body, else_body=else_body):
-            lines = [
-                f"if {format(test)} {{",
-            ]
-            lines += [format(node, indent_level=indent_level + 1) for node in exec_body]
-
-            if else_body is not None:
-                lines.append(_indent("} else {", indent_level))
-                lines += [
-                    format(node, indent_level=indent_level + 1)
-                    for node in (else_body or [])
-                ]
-
-            lines.append(_indent("}", indent_level))
-            src = "\n".join(lines)
-
-        case While(test=test, body=exec_body):
-            lines = [
-                f"while {format(test)} {{",
-            ]
-            lines += [format(node, indent_level=indent_level + 1) for node in exec_body]
-            lines.append("}")
-            src = "\n".join(lines)
-
-        case Break():
-            src = "break;"
-
-        case Continue():
-            src = "continue;"
-
-        case Block(nodes=nodes):
-            lines = [format(n, indent_level) for n in nodes]
-            src = "\n".join(lines)
-
-        case FuncDef(
-            name=Name(value=func_name),
-            args=args,
-            return_type=Type(name=return_type),
-            body=body,
-        ):
-            formatted_args = ", ".join([format(arg) for arg in args])
-            lines = [f"func {func_name}({formatted_args}) {return_type} {{"]
-            lines += [format(node, indent_level=indent_level + 1) for node in body]
-            lines.append("}")
-            src = "\n".join(lines)
-
-        case FuncArg(name=Name(value=arg_name), type_=Type(name=arg_type)):
-            src = f"{arg_name} {arg_type}"
-
-        case Return(value=ret_expr):
-            src = f"return {format(ret_expr)};"
-
-        case FuncCall(name=Name(value=func_name), args=args):
-            formatted_args = ", ".join(format(arg) for arg in args)
-            src = f"{func_name}({formatted_args})"
-
-        case _:
-            _logger.warning("Unsupported node type: %s", type(node))
-
-    return _indent(src, indent_level)
+def format(node: Node) -> str:
+    return _FormatVisitor().visit(node)
 
 
-def _indent(src: str, indent_level: int) -> str:
-    return " " * indent_level * _INDENT_SPACES + src
+class _FormatVisitor(Visitor):
+    def __init__(self) -> None:
+        self._indent_level = 0
+        # Adds contextual info not to add a redundant semicolon: `var v1 int; = 4;`
+        self._in_assignment = False
+
+    # TODO(povilas): use beartype to ensure str is returned?
+    def visit(self, node: Node) -> str:
+        return super().visit(node)
+
+    def visit_Integer(self, node: Integer) -> str:
+        return str(node.value)
+
+    def visit_Float(self, node: Float) -> str:
+        return str(node.value)
+
+    def visit_Boolean(self, node: Boolean) -> str:
+        return "true" if node.value else "false"
+
+    def visit_Name(self, node: Name) -> str:
+        return node.value
+
+    def visit_PrintStatement(self, node: PrintStatement) -> str:
+        return f"print {self.visit(node.value)};"
+
+    def visit_Break(self, node: Break) -> str:
+        return "break;"
+
+    def visit_Continue(self, node: Continue) -> str:
+        return "continue;"
+
+    def visit_BinOp(self, node: BinOp) -> str:
+        return f"{self.visit(node.left)} {node.operation} {self.visit(node.right)}"
+
+    def visit_UnaryOp(self, node: UnaryOp) -> str:
+        return f"{node.operation}{self.visit(node.operand)}"
+
+    def visit_LogicalOp(self, node: LogicalOp) -> str:
+        return f"{self.visit(node.left)} {node.operation} {self.visit(node.right)}"
+
+    def visit_ParenExpr(self, node: ParenExpr) -> str:
+        return f"({self.visit(node.value)})"
+
+    def visit_Assignment(self, node: Assignment) -> str:
+        self._in_assignment = True
+        res = f"{self.visit(node.left)} = {self.visit(node.right)};"
+        self._in_assignment = False
+        return res
+
+    def visit_VarDecl(self, node: VarDecl) -> str:
+        type_suffix = f" {node.type_.name}" if node.type_ else ""
+        maybe_semicolon = ";" if not self._in_assignment else ""
+        return f"{node.specifier} {node.name.value}{type_suffix}{maybe_semicolon}"
+
+    def visit_Statements(self, node: Statements) -> str:
+        return "\n".join(_indent(self.visit(n), self._indent_level) for n in node.nodes)
+
+    def visit_IfElse(self, node: IfElse) -> str:
+        lines = [
+            f"if {self.visit(node.test)} {{",
+        ]
+        self._indent_level += 1
+        lines.append(self.visit(node.body))
+        self._indent_level -= 1
+
+        if node.else_body is not None:
+            lines.append(_indent("} else {", self._indent_level))
+            self._indent_level += 1
+            lines.append(self.visit(node.else_body))
+            self._indent_level -= 1
+
+        lines.append(_indent("}", self._indent_level))
+        return "\n".join(lines)
+
+    def visit_While(self, node: While) -> str:
+        lines = [
+            f"while {self.visit(node.test)} {{",
+        ]
+        self._indent_level += 1
+        lines.append(self.visit(node.body))
+        self._indent_level -= 1
+        lines.append("}")
+        return "\n".join(lines)
+
+    def visit_FuncDef(self, node: FuncDef) -> str:
+        formatted_args = ", ".join([self.visit(arg) for arg in node.args])
+        lines = [f"func {node.name.value}({formatted_args}) {node.return_type.name} {{"]
+
+        self._indent_level += 1
+        lines.append(self.visit(node.body))
+        self._indent_level -= 1
+
+        lines.append("}")
+        return "\n".join(lines)
+
+    def visit_FuncArg(self, node: FuncArg) -> str:
+        return f"{node.name.value} {node.type_.name}"
+
+    def visit_Return(self, node: Return) -> str:
+        return f"return {self.visit(node.value)};"
+
+    def visit_FuncCall(self, node: FuncCall) -> str:
+        formatted_args = ", ".join(self.visit(arg) for arg in node.args)
+        return f"{node.name.value}({formatted_args})"
+
+
+def _indent(text: str, indent_level: int) -> str:
+    return " " * indent_level * _INDENT_SPACES + text

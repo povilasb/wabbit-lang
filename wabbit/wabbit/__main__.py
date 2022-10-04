@@ -150,8 +150,12 @@ _TESTS = [
     (
         IfElse(
             test=LogicalOp(operation="<", left=Name(value="a"), right=Name(value="b")),
-            body=[Assignment(left=Name(value="minval"), right=Name(value="a"))],
-            else_body=[Assignment(left=Name(value="minval"), right=Name(value="b"))],
+            body=Statements(
+                nodes=[Assignment(left=Name(value="minval"), right=Name(value="a"))]
+            ),
+            else_body=Statements(
+                nodes=[Assignment(left=Name(value="minval"), right=Name(value="b"))]
+            ),
         ),
         """if a < b {
     minval = a;
@@ -164,13 +168,15 @@ _TESTS = [
             test=LogicalOp(
                 operation="<", left=Name(value="x"), right=Integer(value="11")
             ),
-            body=[
-                Assignment(
-                    left=Name(value="fact"),
-                    right=BinOp.mul(Name(value="fact"), Name(value="x")),
-                ),
-                PrintStatement(value=Name(value="fact")),
-            ],
+            body=Statements(
+                nodes=[
+                    Assignment(
+                        left=Name(value="fact"),
+                        right=BinOp.mul(Name(value="fact"), Name(value="x")),
+                    ),
+                    PrintStatement(value=Name(value="fact")),
+                ]
+            ),
         ),
         """while x < 11 {
     fact = fact * x;
@@ -180,28 +186,34 @@ _TESTS = [
     (
         While(
             test=Boolean(value=True),
-            body=[
-                IfElse(
-                    test=LogicalOp(
-                        operation="==",
-                        left=Name(value="n"),
-                        right=Integer(value="0"),
-                    ),
-                    body=[Break()],
-                    else_body=[
-                        PrintStatement(value=Name(value="n")),
-                        Assignment(
+            body=Statements(
+                nodes=[
+                    IfElse(
+                        test=LogicalOp(
+                            operation="==",
                             left=Name(value="n"),
-                            right=BinOp.sub(Name(value="n"), Integer(value="1")),
+                            right=Integer(value="0"),
                         ),
-                        Continue(),
-                    ],
-                ),
-                Assignment(
-                    left=Name(value="n"),
-                    right=BinOp.add(Name(value="n"), Integer(value="1")),
-                ),
-            ],
+                        body=Statements(nodes=[Break()]),
+                        else_body=Statements(
+                            nodes=[
+                                PrintStatement(value=Name(value="n")),
+                                Assignment(
+                                    left=Name(value="n"),
+                                    right=BinOp.sub(
+                                        Name(value="n"), Integer(value="1")
+                                    ),
+                                ),
+                                Continue(),
+                            ]
+                        ),
+                    ),
+                    Assignment(
+                        left=Name(value="n"),
+                        right=BinOp.add(Name(value="n"), Integer(value="1")),
+                    ),
+                ]
+            ),
         ),
         """while true {
     if n == 0 {
@@ -215,7 +227,7 @@ _TESTS = [
 }""",
     ),
     (
-        Block(
+        Statements(
             nodes=[
                 FuncDef(
                     name=Name(value="add"),
@@ -224,7 +236,11 @@ _TESTS = [
                         FuncArg(name=Name(value="y"), type_=Type(name="int")),
                     ],
                     return_type=Type(name="int"),
-                    body=[Return(value=BinOp.add(Name(value="x"), Name(value="y")))],
+                    body=Statements(
+                        nodes=[
+                            Return(value=BinOp.add(Name(value="x"), Name(value="y")))
+                        ]
+                    ),
                 ),
                 Assignment(
                     left=VarDecl(specifier="var", name=Name(value="result")),

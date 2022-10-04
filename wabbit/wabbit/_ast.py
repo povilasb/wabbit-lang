@@ -59,6 +59,12 @@ class Type(Node):
     name: t.Literal["int"] | t.Literal["float"] | t.Literal["bool"] | t.Literal["char"]
 
 
+class Name(Expression):
+    """Either function or variable name."""
+
+    value: str
+
+
 # TODO(povilas): do I want to restrict possible node types in the AST declaration?
 # e.g. Integer | Float
 # Or is this more of a job to a type checker?
@@ -108,12 +114,6 @@ class ParenExpr(Expression):
     value: Node
 
 
-class Name(Expression):
-    """Either function or variable name."""
-
-    value: str
-
-
 class VarDecl(Statement):
     """Variable declaration."""
 
@@ -133,15 +133,24 @@ class Assignment(Expression):
     right: Node
 
 
+class Statements(Node):
+    """A container for multiple statements/expressions."""
+
+    # TODO(povilas): pydantic does some unexpected type guessing and say
+    # Assignment(Expression) becomes a Statement.
+    # nodes: list[Statement | Expression]
+    nodes: list[Node]
+
+
 class IfElse(Statement):
     test: Node
-    body: list[Node] = []
-    else_body: list[Node] | None = None
+    body: Statements = Statements(nodes=[])
+    else_body: Statements | None = None
 
 
 class While(Statement):
     test: LogicalOp | Boolean
-    body: list[Node] = []
+    body: Statements = Statements(nodes=[])
 
 
 class Break(Statement):
@@ -154,15 +163,6 @@ class Continue(Statement):
     """Just a placeholder for the `continue;` statement."""
 
     pass
-
-
-class Block(Node):
-    """A container for multiple statements/expressions."""
-
-    # TODO(povilas): pydantic does some unexpected type guessing and say
-    # Assignment(Expression) becomes a Statement.
-    # nodes: list[Statement | Expression]
-    nodes: list[Node]
 
 
 class FuncArg(Node):
@@ -181,7 +181,7 @@ class FuncDef(Node):
     name: Name
     args: list[FuncArg]
     return_type: Type
-    body: list[Node] = []
+    body: Statements = Statements(nodes=[])
 
 
 class Return(Statement):
@@ -202,3 +202,76 @@ class BlockComment(Node):
 
 class LineComment(Node):
     value: str
+
+
+class Visitor:
+    """Extend this to traverse the AST and apply custom actions on each node."""
+
+    def visit(self, node: Node) -> t.Any:
+        methname = "visit_" + type(node).__name__
+        meth = getattr(self, methname, None)
+        assert meth, f"Visitor method does not exist: {methname}"
+        return meth(node)
+
+    def visit_Integer(self, node: Integer) -> t.Any:
+        pass
+
+    def visit_Float(self, node: Float) -> t.Any:
+        pass
+
+    def visit_Boolean(self, node: Boolean) -> t.Any:
+        pass
+
+    def visit_Type(self, node: Type) -> t.Any:
+        pass
+
+    def visit_Name(self, node: Name) -> t.Any:
+        pass
+
+    def visit_BinOp(self, node: BinOp) -> t.Any:
+        pass
+
+    def visit_UnaryOp(self, node: UnaryOp) -> t.Any:
+        pass
+
+    def visit_LogicalOp(self, node: LogicalOp) -> t.Any:
+        pass
+
+    def visit_ParenExpr(self, node: ParenExpr) -> t.Any:
+        pass
+
+    def visit_VarDecl(self, node: VarDecl) -> t.Any:
+        pass
+
+    def visit_Assignment(self, node: Assignment) -> t.Any:
+        pass
+
+    def visit_IfElse(self, node: IfElse) -> t.Any:
+        pass
+
+    def visit_While(self, node: While) -> t.Any:
+        pass
+
+    def visit_Break(self, node: Break) -> t.Any:
+        pass
+
+    def visit_Continue(self, node: Continue) -> t.Any:
+        pass
+
+    def visit_Statements(self, node: Statements) -> t.Any:
+        pass
+
+    def visit_FuncArg(self, node: FuncArg) -> t.Any:
+        pass
+
+    def visit_FuncDef(self, node: FuncDef) -> t.Any:
+        pass
+
+    def visit_Return(self, node: Return) -> t.Any:
+        pass
+
+    def visit_FuncCall(self, node: FuncCall) -> t.Any:
+        pass
+
+    def visit_PrintStatement(self, node: PrintStatement) -> t.Any:
+        pass
