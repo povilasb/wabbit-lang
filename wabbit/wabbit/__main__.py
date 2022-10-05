@@ -259,12 +259,28 @@ var result = add(2, 3);""",
 ]
 
 
-def main() -> None:
+def main() -> int:
     success = True
     for ast, expected_code in _TESTS:
         success &= _test_format(ast, expected_code, verbose=False)
 
-    sys.exit(0 if success else 1)
+    from ._interpret import interpret, _Interpreter
+
+    n = Statements(
+        nodes=[
+            VarDecl(specifier="var", name=Name(value="n"), type_=Type(name="int")),
+            Assignment(
+                left=Name(value="n"),
+                right=Integer(value="5"),
+            ),
+        ]
+    )
+    print(format(n))
+    interpreter = _Interpreter()
+    interpreter.visit(n)
+    print(interpreter._exec_ctx)
+
+    return 0 if success else 1
 
 
 def _test_format(ast: Node, expected_code: str, verbose: bool = False) -> bool:
@@ -291,4 +307,4 @@ def _test_format(ast: Node, expected_code: str, verbose: bool = False) -> bool:
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

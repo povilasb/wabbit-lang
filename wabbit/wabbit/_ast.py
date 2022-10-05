@@ -94,6 +94,7 @@ class BinOp(Expression):
 
 class UnaryOp(Expression):
     operation: t.Literal["-"] | t.Literal["!"]
+    # TODO(povilas): Expression?
     operand: Node
 
 
@@ -114,6 +115,8 @@ class ParenExpr(Expression):
     value: Node
 
 
+# TODO(povilas): split up to ConstDecl? - they must have initializer while VarDecl
+# does not
 class VarDecl(Statement):
     """Variable declaration."""
 
@@ -129,8 +132,8 @@ class VarDecl(Statement):
 
 
 class Assignment(Expression):
-    left: Node
-    right: Node
+    left: Name | VarDecl
+    right: Expression
 
 
 class Statements(Node):
@@ -214,64 +217,64 @@ class Visitor:
         return meth(node)
 
     def visit_Integer(self, node: Integer) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_Float(self, node: Float) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_Boolean(self, node: Boolean) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_Type(self, node: Type) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_Name(self, node: Name) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_BinOp(self, node: BinOp) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_UnaryOp(self, node: UnaryOp) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_LogicalOp(self, node: LogicalOp) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_ParenExpr(self, node: ParenExpr) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_VarDecl(self, node: VarDecl) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_Assignment(self, node: Assignment) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_IfElse(self, node: IfElse) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_While(self, node: While) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_Break(self, node: Break) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_Continue(self, node: Continue) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_Statements(self, node: Statements) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_FuncArg(self, node: FuncArg) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_FuncDef(self, node: FuncDef) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_Return(self, node: Return) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_FuncCall(self, node: FuncCall) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
 
     def visit_PrintStatement(self, node: PrintStatement) -> t.Any:
-        pass
+        raise RuntimeError("Not implemented")
