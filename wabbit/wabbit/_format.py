@@ -54,7 +54,7 @@ class _FormatVisitor(Visitor):
         return f"({self.visit(node.value)})"
 
     def visit_Assignment(self, node: Assignment) -> str:
-        return f"{self.visit(node.left)} = {self.visit(node.right)};"
+        return f"{self.visit(node.left)} = {self.visit(node.right)}"
 
     def visit_VarDecl(self, node: VarDecl) -> str:
         type_suffix = f" {node.type_.name}" if node.type_ else ""
@@ -68,6 +68,9 @@ class _FormatVisitor(Visitor):
 
     def visit_Statements(self, node: Statements) -> str:
         return "\n".join(_indent(self.visit(n), self._indent_level) for n in node.nodes)
+
+    def visit_ExprAsStatement(self, node: ExprAsStatement) -> t.Any:
+        return f"{self.visit(node.expr)};"
 
     def visit_IfElse(self, node: IfElse) -> str:
         lines = [

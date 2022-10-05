@@ -33,6 +33,20 @@ class Expression(Node):
     """Used to label the node is an expression rather than a statement."""
 
 
+class ExprAsStatement(Statement):
+    """
+    Expressions can sometimes be used in the position of statement. For example:
+
+        x + y;
+        a = b = 123;
+
+    This class provides a "Statement" wrapper around an expression that's meant
+    to capture this particular usage.
+    """
+
+    expr: Expression
+
+
 class PrintStatement(Statement):
     """e.g. `print 123;"""
 
@@ -262,6 +276,9 @@ class Visitor:
         raise RuntimeError("Not implemented")
 
     def visit_Assignment(self, node: Assignment) -> t.Any:
+        raise RuntimeError("Not implemented")
+
+    def visit_ExprAsStatement(self, node: ExprAsStatement) -> t.Any:
         raise RuntimeError("Not implemented")
 
     def visit_IfElse(self, node: IfElse) -> t.Any:

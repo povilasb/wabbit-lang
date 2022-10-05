@@ -102,16 +102,6 @@ _TESTS = [
         "print !false;",
     ),
     (
-        Assignment(
-            left=Name(value="perimeter"),
-            right=BinOp.mul(Name(value="tau"), Name(value="radius")),
-        ),
-        # TODO(povilas): assignment is actually an expression and thus we don't
-        # always want to append ';':
-        #   func1(res = x * y);
-        "perimeter = tau * radius;",
-    ),
-    (
         VarDecl(name=Name(value="perimeter"), type_=Type(name="float")),
         "var perimeter float;",
     ),
@@ -139,13 +129,45 @@ _TESTS = [
         "var radius = 4.0;",
     ),
     (
+        Assignment(
+            left=Name(value="perimeter"),
+            right=BinOp.mul(Name(value="tau"), Name(value="radius")),
+        ),
+        "perimeter = tau * radius",
+    ),
+    (
+        Assignment(
+            left=Name(value="a"),
+            right=Assignment(left=Name(value="b"), right=Integer(value="123")),
+        ),
+        "a = b = 123",
+    ),
+    (
+        ExprAsStatement(
+            expr=Assignment(left=Name(value="a"), right=Integer(value="123"))
+        ),
+        "a = 123;",
+    ),
+    (
         IfElse(
             test=LogicalOp(operation="<", left=Name(value="a"), right=Name(value="b")),
             body=Statements(
-                nodes=[Assignment(left=Name(value="minval"), right=Name(value="a"))]
+                nodes=[
+                    ExprAsStatement(
+                        expr=Assignment(
+                            left=Name(value="minval"), right=Name(value="a")
+                        )
+                    )
+                ]
             ),
             else_body=Statements(
-                nodes=[Assignment(left=Name(value="minval"), right=Name(value="b"))]
+                nodes=[
+                    ExprAsStatement(
+                        expr=Assignment(
+                            left=Name(value="minval"), right=Name(value="b")
+                        )
+                    )
+                ]
             ),
         ),
         """if a < b {
@@ -161,9 +183,11 @@ _TESTS = [
             ),
             body=Statements(
                 nodes=[
-                    Assignment(
-                        left=Name(value="fact"),
-                        right=BinOp.mul(Name(value="fact"), Name(value="x")),
+                    ExprAsStatement(
+                        expr=Assignment(
+                            left=Name(value="fact"),
+                            right=BinOp.mul(Name(value="fact"), Name(value="x")),
+                        )
                     ),
                     PrintStatement(value=Name(value="fact")),
                 ]
@@ -189,19 +213,23 @@ _TESTS = [
                         else_body=Statements(
                             nodes=[
                                 PrintStatement(value=Name(value="n")),
-                                Assignment(
-                                    left=Name(value="n"),
-                                    right=BinOp.sub(
-                                        Name(value="n"), Integer(value="1")
-                                    ),
+                                ExprAsStatement(
+                                    expr=Assignment(
+                                        left=Name(value="n"),
+                                        right=BinOp.sub(
+                                            Name(value="n"), Integer(value="1")
+                                        ),
+                                    )
                                 ),
                                 Continue(),
                             ]
                         ),
                     ),
-                    Assignment(
-                        left=Name(value="n"),
-                        right=BinOp.add(Name(value="n"), Integer(value="1")),
+                    ExprAsStatement(
+                        expr=Assignment(
+                            left=Name(value="n"),
+                            right=BinOp.add(Name(value="n"), Integer(value="1")),
+                        )
                     ),
                 ]
             ),
