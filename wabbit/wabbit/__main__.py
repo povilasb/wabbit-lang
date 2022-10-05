@@ -116,9 +116,10 @@ _TESTS = [
         "var perimeter float;",
     ),
     (
-        Assignment(
-            left=VarDecl(name=Name(value="v1"), type_=Type(name="int")),
-            right=Integer(value="4"),
+        VarDecl(
+            name=Name(value="v1"),
+            type_=Type(name="int"),
+            value=Integer(value="4"),
         ),
         "var v1 int = 4;",
     ),
@@ -134,10 +135,7 @@ _TESTS = [
         "const tau = 2.0 * pi;",
     ),
     (
-        Assignment(
-            left=VarDecl(name=Name(value="radius")),
-            right=Float(value="4.0"),
-        ),
+        VarDecl(name=Name(value="radius"), value=Float(value="4.0")),
         "var radius = 4.0;",
     ),
     (
@@ -235,9 +233,9 @@ _TESTS = [
                         ]
                     ),
                 ),
-                Assignment(
-                    left=VarDecl(name=Name(value="result")),
-                    right=FuncCall(
+                VarDecl(
+                    name=Name(value="result"),
+                    value=FuncCall(
                         name=Name(value="add"),
                         args=[Integer(value="2"), Integer(value="3")],
                     ),

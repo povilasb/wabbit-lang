@@ -15,8 +15,6 @@ def format(node: Node) -> str:
 class _FormatVisitor(Visitor):
     def __init__(self) -> None:
         self._indent_level = 0
-        # Adds contextual info not to add a redundant semicolon: `var v1 int; = 4;`
-        self._in_assignment = False
 
     # TODO(povilas): use beartype to ensure str is returned?
     def visit(self, node: Node) -> str:
@@ -56,15 +54,12 @@ class _FormatVisitor(Visitor):
         return f"({self.visit(node.value)})"
 
     def visit_Assignment(self, node: Assignment) -> str:
-        self._in_assignment = True
-        res = f"{self.visit(node.left)} = {self.visit(node.right)};"
-        self._in_assignment = False
-        return res
+        return f"{self.visit(node.left)} = {self.visit(node.right)};"
 
     def visit_VarDecl(self, node: VarDecl) -> str:
         type_suffix = f" {node.type_.name}" if node.type_ else ""
-        maybe_semicolon = ";" if not self._in_assignment else ""
-        return f"var {node.name.value}{type_suffix}{maybe_semicolon}"
+        maybe_value = f" = {self.visit(node.value)}" if node.value else ""
+        return f"var {node.name.value}{type_suffix}{maybe_value};"
 
     def visit_ConstDecl(self, node: ConstDecl) -> str:
         type_suffix = f" {node.type_.name}" if node.type_ else ""
