@@ -79,15 +79,6 @@ def tokenize(text: str) -> list[str]:
     return tokens
 
 
-assert tokenize("print 123 + 1.2;") == [
-    Token("PRINT", "print", 0),
-    Token("INTEGER", "123", 6),
-    Token("ADD", "+", 10),
-    Token("FLOAT", "1.2", 12),
-    Token("SEMICOLON", ";", 15),
-]
-
-
 def match_digits(text: str, start: int = 0) -> str:
     n = start
     while n < len(text) and text[n].isdigit():
@@ -235,3 +226,11 @@ def match_whitespace(text: str, start: int = 0) -> str:
 assert match_whitespace("abc") == ""
 assert match_whitespace(" abc") == " "
 assert match_whitespace("   abc") == "   "
+
+assert tokenize("print 123 + 1.2;") == [
+    Token("PRINT", "print", 0),
+    Token("INTEGER", "123", 6),
+    Token("ADD", "+", 10),
+    Token("FLOAT", "1.2", 12),
+    Token("SEMICOLON", ";", 15),
+]
