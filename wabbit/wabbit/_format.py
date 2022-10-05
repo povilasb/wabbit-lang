@@ -64,7 +64,12 @@ class _FormatVisitor(Visitor):
     def visit_VarDecl(self, node: VarDecl) -> str:
         type_suffix = f" {node.type_.name}" if node.type_ else ""
         maybe_semicolon = ";" if not self._in_assignment else ""
-        return f"{node.specifier} {node.name.value}{type_suffix}{maybe_semicolon}"
+        return f"var {node.name.value}{type_suffix}{maybe_semicolon}"
+
+    def visit_ConstDecl(self, node: ConstDecl) -> str:
+        type_suffix = f" {node.type_.name}" if node.type_ else ""
+        value = self.visit(node.value)
+        return f"const {node.name.value}{type_suffix} = {value};"
 
     def visit_Statements(self, node: Statements) -> str:
         return "\n".join(_indent(self.visit(n), self._indent_level) for n in node.nodes)

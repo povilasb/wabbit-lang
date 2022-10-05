@@ -112,37 +112,30 @@ _TESTS = [
         "perimeter = tau * radius;",
     ),
     (
-        VarDecl(
-            specifier="var", name=Name(value="perimeter"), type_=Type(name="float")
-        ),
+        VarDecl(name=Name(value="perimeter"), type_=Type(name="float")),
         "var perimeter float;",
     ),
     (
         Assignment(
-            left=VarDecl(
-                specifier="var", name=Name(value="v1"), type_=Type(name="int")
-            ),
+            left=VarDecl(name=Name(value="v1"), type_=Type(name="int")),
             right=Integer(value="4"),
         ),
         "var v1 int = 4;",
     ),
     (
-        Assignment(
-            left=VarDecl(specifier="const", name=Name(value="pi")),
-            right=Float(value="3.14159"),
-        ),
+        ConstDecl(name=Name(value="pi"), value=Float(value="3.14159")),
         "const pi = 3.14159;",
     ),
     (
-        Assignment(
-            left=VarDecl(specifier="const", name=Name(value="tau")),
-            right=BinOp.mul(Float(value="2.0"), Name(value="pi")),
+        ConstDecl(
+            name=Name(value="tau"),
+            value=BinOp.mul(Float(value="2.0"), Name(value="pi")),
         ),
         "const tau = 2.0 * pi;",
     ),
     (
         Assignment(
-            left=VarDecl(specifier="var", name=Name(value="radius")),
+            left=VarDecl(name=Name(value="radius")),
             right=Float(value="4.0"),
         ),
         "var radius = 4.0;",
@@ -243,7 +236,7 @@ _TESTS = [
                     ),
                 ),
                 Assignment(
-                    left=VarDecl(specifier="var", name=Name(value="result")),
+                    left=VarDecl(name=Name(value="result")),
                     right=FuncCall(
                         name=Name(value="add"),
                         args=[Integer(value="2"), Integer(value="3")],
@@ -268,7 +261,7 @@ def main() -> int:
 
     n = Statements(
         nodes=[
-            VarDecl(specifier="var", name=Name(value="n"), type_=Type(name="int")),
+            VarDecl(name=Name(value="n"), type_=Type(name="int")),
             Assignment(
                 left=Name(value="n"),
                 right=Integer(value="5"),

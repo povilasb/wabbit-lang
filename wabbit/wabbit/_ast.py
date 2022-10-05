@@ -115,12 +115,14 @@ class ParenExpr(Expression):
     value: Node
 
 
-# TODO(povilas): split up to ConstDecl? - they must have initializer while VarDecl
-# does not
 class VarDecl(Statement):
-    """Variable declaration."""
+    """Variable declaration.
 
-    specifier: t.Literal["const"] | t.Literal["var"]
+    Either type or initial value must be specified.
+
+    `var n int = 1;`
+    """
+
     name: Name
     type_: Type | None = None
     """Type is optional, e.g. when it is inferred:
@@ -129,6 +131,16 @@ class VarDecl(Statement):
     var radius = 4.0;
     ```
     """
+    value: Expression | None = None
+
+
+class ConstDecl(Statement):
+    """`const n int = 1;`"""
+
+    name: Name
+    value: Expression
+    type_: Type | None = None
+    """Type is optional as it is inferred from the initial `value`."""
 
 
 class Assignment(Expression):
@@ -244,6 +256,9 @@ class Visitor:
         raise RuntimeError("Not implemented")
 
     def visit_VarDecl(self, node: VarDecl) -> t.Any:
+        raise RuntimeError("Not implemented")
+
+    def visit_ConstDecl(self, node: ConstDecl) -> t.Any:
         raise RuntimeError("Not implemented")
 
     def visit_Assignment(self, node: Assignment) -> t.Any:
