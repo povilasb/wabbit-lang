@@ -1,8 +1,6 @@
 """Lexical Wabbit language analysis."""
 
-
-class WabbitSyntaxError(Exception):
-    pass
+from ._errors import WabbitSyntaxError
 
 
 class Token:

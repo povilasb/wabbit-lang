@@ -172,13 +172,13 @@ class Statements(Node):
 
 
 class IfElse(Statement):
-    test: Node
+    test: Expression
     body: Statements = Statements(nodes=[])
     else_body: Statements | None = None
 
 
 class While(Statement):
-    test: LogicalOp | Boolean
+    test: Expression
     body: Statements = Statements(nodes=[])
 
 
