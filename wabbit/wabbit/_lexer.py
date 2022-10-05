@@ -56,9 +56,9 @@ _KEYWORDS = {
 }
 
 
-def tokenize(text: str) -> list[str]:
+def tokenize(text: str) -> list[Token]:
     pos = 0
-    tokens = []
+    tokens: list[Token] = []
 
     while pos < len(text):
         # NOTE: order matters - match comments first, float before int, etc.

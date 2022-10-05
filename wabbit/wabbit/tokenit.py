@@ -1,3 +1,9 @@
+"""
+Usage:
+
+poetry run python -m wabbit.tokenit program.wb
+"""
+
 import typer
 
 from ._lexer import tokenize
