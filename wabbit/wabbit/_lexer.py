@@ -37,9 +37,23 @@ _SYMBOL_TOKENS = {
     "{": "OPEN_CURLY_BRACE",
     "}": "CLOSE_CURLY_BRACE",
     ";": "SEMICOLON",
+    ",": "COMMA",
 }
 
-_KEYWORDS = {"print", "var", "const", "if", "else", "while", "func", "return"}
+_KEYWORDS = {
+    "print",
+    "var",
+    "const",
+    "if",
+    "else",
+    "while",
+    "break",
+    "continue",
+    "func",
+    "return",
+    "true",
+    "false",
+}
 
 
 def tokenize(text: str) -> list[str]:
@@ -112,30 +126,13 @@ assert match_name("abc 123") == "abc"
 
 
 def match_symbol(text: str, start: int = 0) -> str:
-    symbols = [
-        "+",
-        "-",
-        "*",
-        "/",
-        "<",
-        ">",
-        "=",
-        "<=",
-        ">=",
-        "==",
-        "!",
-        "&&",
-        "||",
-        "(",
-        ")",
-        "{",
-        "}",
-        ";",
-    ]
+    symbols1 = {"+", "-", "*", "/", "<", ">", "=", "(", ")", "{", "}", ";", "!", ","}
+    symbols2 = {"<=", ">=", "==", "&&", "||"}
 
-    if len(text) >= 2 and text[:2] in symbols:
-        return text[start:2]
-    if text[start] in symbols:
+    if start + 2 <= len(text) and text[start : start + 2] in symbols2:
+        return text[start : start + 2]
+
+    if start < len(text) and text[start] in symbols1:
         return text[start]
 
     return ""
@@ -145,6 +142,7 @@ assert match_symbol("+") == "+"
 assert match_symbol("<=") == "<="
 assert match_symbol("<+") == "<"  # <+ is not a valid Wabbit symbol. But < is.
 assert match_symbol("abc") == ""
+assert match_symbol("print true && true", 11) == "&&"
 
 
 def match_block_comment(text: str, start: int = 0) -> str:
