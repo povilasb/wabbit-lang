@@ -2,6 +2,7 @@ import sys
 
 from ._ast import *
 from ._format import format
+from . import _lexer
 
 
 _TESTS = [
