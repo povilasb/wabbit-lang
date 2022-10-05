@@ -5,6 +5,89 @@ class WabbitSyntaxError(Exception):
     pass
 
 
+class Token:
+    def __init__(self, type_: str, value: str, pos: int) -> None:
+        self.type = type_
+        self.value = value
+        self.pos = pos
+
+    def __eq__(self, o: "Token") -> bool:
+        return self.type == o.type and self.value == o.value and self.pos == o.pos
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.type}, {self.value}, {self.pos})"
+
+
+_SYMBOL_TOKENS = {
+    "+": "ADD",
+    "-": "SUB",
+    "*": "MULTIPLY",
+    "/": "DIVIDE",
+    "<": "LESS",
+    ">": "MORE",
+    "=": "EQUAL",
+    "<=": "LESS_EQ",
+    ">=": "MORE_EQ",
+    "==": "DOUBLE_EQ",
+    "!": "LOGICAL_NOT",
+    "&&": "LOGICAL_AND",
+    "||": "LOGICAL_OR",
+    "(": "OPEN_PARENS",
+    ")": "CLOSE_PARENS",
+    "{": "OPEN_CURLY_BRACE",
+    "}": "CLOSE_CURLY_BRACE",
+    ";": "SEMICOLON",
+}
+
+_KEYWORDS = {"print", "var", "const", "if", "else", "while", "func", "return"}
+
+
+def tokenize(text: str) -> list[str]:
+    pos = 0
+    tokens = []
+
+    while pos < len(text):
+        # NOTE: order matters - match comments first, float before int, etc.
+        if m := match_block_comment(text, pos):
+            pass
+        elif m := match_line_comment(text, pos):
+            pass
+
+        elif m := match_name(text, pos):
+            if m in _KEYWORDS:
+                tokens.append(Token(m.upper(), m, pos))
+            else:
+                tokens.append(Token("NAME", m, pos))
+
+        elif m := match_float(text, pos):
+            tokens.append(Token("FLOAT", m, pos))
+        elif m := match_digits(text, pos):
+            tokens.append(Token("INTEGER", m, pos))
+
+        elif m := match_symbol(text, pos):
+            tokens.append(Token(_SYMBOL_TOKENS[m], m, pos))
+
+        elif m := match_whitespace(text, pos):
+            pass
+        else:
+            raise WabbitSyntaxError(
+                f"Could not match a token at position {pos}: '{text[pos:pos+10]}...'"
+            )
+
+        pos += len(m)
+
+    return tokens
+
+
+assert tokenize("print 123 + 1.2;") == [
+    Token("PRINT", "print", 0),
+    Token("INTEGER", "123", 6),
+    Token("ADD", "+", 10),
+    Token("FLOAT", "1.2", 12),
+    Token("SEMICOLON", ";", 15),
+]
+
+
 def match_digits(text: str, start: int = 0) -> str:
     n = start
     while n < len(text) and text[n].isdigit():
@@ -152,182 +235,3 @@ def match_whitespace(text: str, start: int = 0) -> str:
 assert match_whitespace("abc") == ""
 assert match_whitespace(" abc") == " "
 assert match_whitespace("   abc") == "   "
-
-
-class Token:
-    def __init__(self, value: str, pos: int) -> None:
-        self.value = value
-        self.pos = pos
-
-    def __eq__(self, o: "Token") -> bool:
-        return self.value == o.value and self.pos == o.pos
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.value}, {self.pos})"
-
-
-class Float(Token):
-    pass
-
-
-class Digits(Token):
-    pass
-
-
-class Name(Token):
-    pass
-
-
-class Print(Token):
-    pass
-
-
-class Const(Token):
-    pass
-
-
-class Var(Token):
-    pass
-
-
-class Plus(Token):
-    pass
-
-
-class Minus(Token):
-    pass
-
-
-class Multiply(Token):
-    pass
-
-
-class Divide(Token):
-    pass
-
-
-class Less(Token):
-    pass
-
-
-class More(Token):
-    pass
-
-
-class Equal(Token):
-    pass
-
-
-class LessEq(Token):
-    pass
-
-
-class MoreEq(Token):
-    pass
-
-
-class DoubleEq(Token):
-    pass
-
-
-class LogicalNot(Token):
-    pass
-
-
-class LogicalAnd(Token):
-    pass
-
-
-class LogicalOr(Token):
-    pass
-
-
-class OpenParens(Token):
-    pass
-
-
-class CloseParens(Token):
-    pass
-
-
-class OpenCurlyBrace(Token):
-    pass
-
-
-class CloseCurlyBrace(Token):
-    pass
-
-
-class Semicolon(Token):
-    pass
-
-
-_TOKEN_CLS = {
-    "+": Plus,
-    "-": Minus,
-    "*": Multiply,
-    "/": Divide,
-    "<": Less,
-    ">": More,
-    "=": Equal,
-    "<=": LessEq,
-    ">=": MoreEq,
-    "==": DoubleEq,
-    "!": LogicalNot,
-    "&&": LogicalAnd,
-    "||": LogicalOr,
-    "(": OpenParens,
-    ")": CloseParens,
-    "{": OpenCurlyBrace,
-    "}": CloseCurlyBrace,
-    ";": Semicolon,
-}
-
-_NAME_CLS = {
-    "print": Print,
-    "const": Const,
-    "var": Var,
-}
-
-
-def tokenize(text: str) -> list[str]:
-    pos = 0
-    tokens = []
-
-    while pos < len(text):
-        # NOTE: order matters - match comments first, float before int, etc.
-        if m := match_block_comment(text, pos):
-            pass
-        elif m := match_line_comment(text, pos):
-            pass
-
-        elif m := match_name(text, pos):
-            tokens.append(_NAME_CLS.get(m, Name)(m, pos))
-
-        elif m := match_float(text, pos):
-            tokens.append(Float(m, pos))
-        elif m := match_digits(text, pos):
-            tokens.append(Digits(m, pos))
-
-        elif m := match_symbol(text, pos):
-            tokens.append(_TOKEN_CLS[m](m, pos))
-
-        elif m := match_whitespace(text, pos):
-            pass
-        else:
-            raise WabbitSyntaxError(
-                f"Could not match a token at position {pos}: '{text[pos:pos+10]}...'"
-            )
-
-        pos += len(m)
-
-    return tokens
-
-
-assert tokenize("print 123 + 1.2;") == [
-    Name("print", 0),
-    Digits("123", 6),
-    Plus("+", 10),
-    Float("1.2", 12),
-    Semicolon(";", 15),
-]
