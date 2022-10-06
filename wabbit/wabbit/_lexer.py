@@ -180,7 +180,7 @@ def match_line_comment(text: str, start: int = 0) -> str:
     while n < len(text) and text[n] != "\n":
         n += 1
 
-    if text[n] == "\n":
+    if n < len(text) and text[n] == "\n":
         return text[start : n + 1]
 
     return ""
