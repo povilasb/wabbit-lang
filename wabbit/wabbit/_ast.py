@@ -157,7 +157,7 @@ class ConstDecl(Statement):
 
 
 class Assignment(Expression):
-    left: Name
+    left: Expression
     right: Expression
 
 

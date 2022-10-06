@@ -138,7 +138,31 @@ def _parse_type(tokens: "_TokenStream") -> Type:
 
 
 def _parse_expression(tokens: "_TokenStream") -> Expression:
-    # TODO(povilas): parse assignment: n = 1;
+    return _parse_assignment_or_expr(tokens)
+
+
+def _parse_assignment_or_expr(tokens: "_TokenStream") -> Expression:
+    left = _parse_or_or_expr(tokens)
+    if tokens.peek("EQUAL"):
+        tokens.expect("EQUAL")
+        right = _parse_or_or_expr(tokens)
+        return Assignment(location=left.location, left=left, right=right)
+
+    return left
+
+
+def _parse_group_or_expr(tokens: "_TokenStream") -> Expression:
+    """Group is parenthesised expression: `(1 + 2)`."""
+    if tokens.peek("OPEN_PARENS"):
+        tokens.expect("OPEN_PARENS")
+        expr = _parse_or_or_expr(tokens)
+        tokens.expect("CLOSE_PARENS")
+        # TODO(povilas): need a Group node?
+        # With the current model it's not straightforward to format the AST:
+        # the formatter needs to do the look ahead/back for the preference which is
+        # already done here.
+        return expr
+
     return _parse_or_or_expr(tokens)
 
 
@@ -219,10 +243,10 @@ def _parse_factor(tokens: "_TokenStream") -> Expression:
         return _parse_name(tokens)
     elif tokens.peek_one_of("SUB", "ADD", "LOGICAL_NOT"):
         return _parse_unaryop(tokens)
-    elif tokens.peek("("):
-        tokens.expect("(")
-        factor = _parse_expression(tokens)
-        tokens.expect(")")
+    elif tokens.peek("OPEN_PARENS"):
+        tokens.expect("OPEN_PARENS")
+        factor = _parse_group_or_expr(tokens)
+        tokens.expect("CLOSE_PARENS")
         return factor
     else:
         raise WabbitSyntaxError("Unexpected token for factor", tokens.current())
@@ -291,7 +315,7 @@ class _TokenStream:
     def expect(self, toktype: TokenType) -> Token:
         if self.current().type != toktype:
             raise WabbitSyntaxError(
-                f"Expected token '{toktype}' but was '{self.current().type}'"
+                f"Expected token '{toktype}' but was '{self.current()}'"
             )
 
         self._curr_token += 1
