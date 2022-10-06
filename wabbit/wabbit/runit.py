@@ -17,7 +17,7 @@ def main(wabbit_file: str) -> None:
     interpreter = _Interpreter()
     try:
         interpreter.visit(ast)
-        print(interpreter._exec_ctx)
+        print(interpreter._exec_ctx[0])
     except WabbitError as e:
         print("Error:", e)
 
