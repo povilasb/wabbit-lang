@@ -264,7 +264,7 @@ def _parse_false(tokens: "_TokenStream") -> Boolean:
 
 def _parse_unaryop(tokens: "_TokenStream") -> UnaryOp:
     t1 = tokens.expect_one_of("SUB", "ADD", "LOGICAL_NOT")
-    val = _parse_expression(tokens)
+    val = _parse_factor(tokens)
     match t1.type:
         case "SUB":
             op = "-"
