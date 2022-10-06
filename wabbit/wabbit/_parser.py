@@ -151,21 +151,6 @@ def _parse_assignment_or_expr(tokens: "_TokenStream") -> Expression:
     return left
 
 
-def _parse_group_or_expr(tokens: "_TokenStream") -> Expression:
-    """Group is parenthesised expression: `(1 + 2)`."""
-    if tokens.peek("OPEN_PARENS"):
-        tokens.expect("OPEN_PARENS")
-        expr = _parse_or_or_expr(tokens)
-        tokens.expect("CLOSE_PARENS")
-        # TODO(povilas): need a Group node?
-        # With the current model it's not straightforward to format the AST:
-        # the formatter needs to do the look ahead/back for the preference which is
-        # already done here.
-        return expr
-
-    return _parse_or_or_expr(tokens)
-
-
 def _parse_or_or_expr(tokens: "_TokenStream") -> Expression:
     left = _parse_and_or_expr(tokens)
     while tok_op := tokens.peek_one_of("LOGICAL_OR"):
@@ -245,7 +230,7 @@ def _parse_factor(tokens: "_TokenStream") -> Expression:
         return _parse_unaryop(tokens)
     elif tokens.peek("OPEN_PARENS"):
         tokens.expect("OPEN_PARENS")
-        factor = _parse_group_or_expr(tokens)
+        factor = _parse_expression(tokens)
         tokens.expect("CLOSE_PARENS")
         return factor
     else:
