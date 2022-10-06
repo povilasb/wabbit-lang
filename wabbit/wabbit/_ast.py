@@ -107,15 +107,14 @@ class BinOp(Expression):
 
 
 class UnaryOp(Expression):
-    operation: t.Literal["-"] | t.Literal["!"]
-    # TODO(povilas): Expression?
-    operand: Node
+    operation: t.Literal["-"] | t.Literal["+"] | t.Literal["!"]
+    operand: Expression
 
 
 class LogicalOp(Expression):
     operation: t.Literal["=="] | t.Literal[">"] | t.Literal["<"] | t.Literal[
         "&&"
-    ] | t.Literal["||"]
+    ] | t.Literal["||"] | t.Literal["<="] | t.Literal[">="] | t.Literal["!="]
     left: Expression
     right: Expression
 

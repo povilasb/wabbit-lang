@@ -139,20 +139,71 @@ def _parse_type(tokens: "_TokenStream") -> Type:
 
 def _parse_expression(tokens: "_TokenStream") -> Expression:
     # TODO(povilas): parse assignment: n = 1;
-    factor1 = _parse_factor(tokens)
-
-    if tokens.peek_one_of("MULTIPLY", "DIVIDE"):
-        return _parse_binop(tokens, factor1)
-
-    return factor1
+    return _parse_or_or_expr(tokens)
 
 
-def _parse_binop(tokens: "_TokenStream", factor1: Expression) -> Expression:
-    tok_op = tokens.expect_one_of("MULTIPLY", "DIVIDE")
-    factor2 = _parse_factor(tokens)
-    return BinOp(
-        location=factor1.location, operation=tok_op.value, left=factor1, right=factor2
-    )
+def _parse_or_or_expr(tokens: "_TokenStream") -> Expression:
+    left = _parse_and_or_expr(tokens)
+    while tok_op := tokens.peek_one_of("LOGICAL_OR"):
+        tokens.expect_one_of("LOGICAL_OR")
+        right = _parse_and_or_expr(tokens)
+        left = LogicalOp(
+            location=left.location, operation=tok_op.value, left=left, right=right
+        )
+    return left
+
+
+def _parse_and_or_expr(tokens: "_TokenStream") -> Expression:
+    """This is very similar to _parse_logical_cmp_or_expr() but makes sure the
+    precedence of `&&` operators over others:
+
+        a < b && c > d
+        (a < b) && (c > d)
+    """
+    left = _parse_logical_cmp_or_expr(tokens)
+    while tok_op := tokens.peek_one_of("LOGICAL_AND"):
+        tokens.expect_one_of("LOGICAL_AND")
+        right = _parse_logical_cmp_or_expr(tokens)
+        left = LogicalOp(
+            location=left.location, operation=tok_op.value, left=left, right=right
+        )
+    return left
+
+
+def _parse_logical_cmp_or_expr(tokens: "_TokenStream") -> Expression:
+    cmp_tokens = ("LESS", "MORE", "LESS_EQ", "MORE_EQ", "DOUBLE_EQ", "NOT_EQ")
+    left = _parse_addsub_or_expr(tokens)
+    while tok_op := tokens.peek_one_of(*cmp_tokens):
+        tokens.expect_one_of(*cmp_tokens)
+        right = _parse_addsub_or_expr(tokens)
+        left = LogicalOp(
+            location=left.location, operation=tok_op.value, left=left, right=right
+        )
+    return left
+
+
+def _parse_addsub_or_expr(tokens: "_TokenStream") -> Expression:
+    left = _parse_muldiv_or_expr(tokens)
+    while tok_op := tokens.peek_one_of("ADD", "SUB"):
+        tokens.expect_one_of("ADD", "SUB")
+        right = _parse_muldiv_or_expr(tokens)
+        left = BinOp(
+            location=left.location, operation=tok_op.value, left=left, right=right
+        )
+    return left
+
+
+def _parse_muldiv_or_expr(tokens: "_TokenStream") -> Expression:
+    left = _parse_factor(tokens)
+
+    while tok_op := tokens.peek_one_of("MULTIPLY", "DIVIDE"):
+        tokens.expect_one_of("MULTIPLY", "DIVIDE")
+        right = _parse_factor(tokens)
+        left = BinOp(
+            location=left.location, operation=tok_op.value, left=left, right=right
+        )
+
+    return left
 
 
 def _parse_factor(tokens: "_TokenStream") -> Expression:
@@ -166,6 +217,13 @@ def _parse_factor(tokens: "_TokenStream") -> Expression:
         return _parse_false(tokens)
     elif tokens.peek("NAME"):
         return _parse_name(tokens)
+    elif tokens.peek_one_of("SUB", "ADD", "LOGICAL_NOT"):
+        return _parse_unaryop(tokens)
+    elif tokens.peek("("):
+        tokens.expect("(")
+        factor = _parse_expression(tokens)
+        tokens.expect(")")
+        return factor
     else:
         raise WabbitSyntaxError("Unexpected token for factor", tokens.current())
 
@@ -193,6 +251,22 @@ def _parse_true(tokens: "_TokenStream") -> Boolean:
 def _parse_false(tokens: "_TokenStream") -> Boolean:
     t = tokens.expect("FALSE")
     return Boolean(location=t.pos, value=False)
+
+
+def _parse_unaryop(tokens: "_TokenStream") -> UnaryOp:
+    t1 = tokens.expect_one_of("SUB", "ADD", "LOGICAL_NOT")
+    val = _parse_expression(tokens)
+    match t1.type:
+        case "SUB":
+            op = "-"
+        case "ADD":
+            op = "+"
+        case "LOGICAL_NOT":
+            op = "!"
+        case _:
+            assert False, f"Unexpected token for unary operator {t1.value}"
+
+    return UnaryOp(location=t1.pos, operation=op, operand=val)
 
 
 class _TokenStream:

@@ -27,6 +27,7 @@ _SYMBOL_TOKENS = {
     "<=": "LESS_EQ",
     ">=": "MORE_EQ",
     "==": "DOUBLE_EQ",
+    "!=": "NOT_EQ",
     "!": "LOGICAL_NOT",
     "&&": "LOGICAL_AND",
     "||": "LOGICAL_OR",
@@ -38,6 +39,7 @@ _SYMBOL_TOKENS = {
     ",": "COMMA",
 }
 
+# TODO(povilas): add int, float, bool, char
 _KEYWORDS = {
     "print",
     "var",
@@ -125,7 +127,7 @@ assert match_name("abc 123") == "abc"
 
 def match_symbol(text: str, start: int = 0) -> str:
     symbols1 = {"+", "-", "*", "/", "<", ">", "=", "(", ")", "{", "}", ";", "!", ","}
-    symbols2 = {"<=", ">=", "==", "&&", "||"}
+    symbols2 = {"<=", ">=", "==", "&&", "||", "!="}
 
     if start + 2 <= len(text) and text[start : start + 2] in symbols2:
         return text[start : start + 2]
