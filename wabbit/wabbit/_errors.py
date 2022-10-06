@@ -7,3 +7,11 @@ class WabbitError(Exception):
 
 class WabbitSyntaxError(WabbitError):
     pass
+
+
+class WabbitTypeError(WabbitError):
+    pass
+
+
+class WabbitRuntimeError(WabbitError):
+    pass

@@ -138,6 +138,7 @@ def _parse_type(tokens: "_TokenStream") -> Type:
 
 
 def _parse_expression(tokens: "_TokenStream") -> Expression:
+    # TODO(povilas): parse assignment: n = 1;
     factor1 = _parse_factor(tokens)
 
     if tokens.peek_one_of("MULTIPLY", "DIVIDE"):

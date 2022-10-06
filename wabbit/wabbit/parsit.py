@@ -14,6 +14,10 @@ def main(wabbit_file: str) -> None:
     for n in ast.nodes:
         print(n.__class__.__name__, n)
 
+    from ._format import format
+
+    print(format(ast))
+
 
 if __name__ == "__main__":
     typer.run(main)

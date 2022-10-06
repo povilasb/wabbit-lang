@@ -2,7 +2,6 @@ import sys
 
 from ._ast import *
 from ._format import format
-from . import _lexer
 
 
 _TESTS = [
@@ -283,22 +282,6 @@ def main() -> int:
     success = True
     for ast, expected_code in _TESTS:
         success &= _test_format(ast, expected_code, verbose=False)
-
-    from ._interpret import interpret, _Interpreter
-
-    n = Statements(
-        nodes=[
-            VarDecl(name=Name(value="n"), type_=Type(name="int")),
-            Assignment(
-                left=Name(value="n"),
-                right=Integer(value="5"),
-            ),
-        ]
-    )
-    print(format(n))
-    interpreter = _Interpreter()
-    interpreter.visit(n)
-    print(interpreter._exec_ctx)
 
     return 0 if success else 1
 

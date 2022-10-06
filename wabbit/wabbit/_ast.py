@@ -116,8 +116,8 @@ class LogicalOp(Expression):
     operation: t.Literal["=="] | t.Literal[">"] | t.Literal["<"] | t.Literal[
         "&&"
     ] | t.Literal["||"]
-    left: Node
-    right: Node
+    left: Expression
+    right: Expression
 
 
 class ParenExpr(Expression):
@@ -158,7 +158,7 @@ class ConstDecl(Statement):
 
 
 class Assignment(Expression):
-    left: Name | VarDecl
+    left: Name
     right: Expression
 
 

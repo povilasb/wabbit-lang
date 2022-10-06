@@ -3,18 +3,7 @@
 import typing as t
 
 from ._ast import *
-
-
-class WabbitError(Exception):
-    pass
-
-
-class WabbitTypeError(WabbitError):
-    pass
-
-
-class WabbitRuntimeError(WabbitError):
-    pass
+from ._errors import WabbitRuntimeError, WabbitTypeError
 
 
 def interpret(ast: Node) -> None:
@@ -22,7 +11,14 @@ def interpret(ast: Node) -> None:
     _Interpreter().visit(ast)
 
 
+_DataTypes: t.TypeAlias = int | float | bool | str
+
+
 class _Interpreter(Visitor):
+    """
+    Expressions return a value, Statements do not.
+    """
+
     def __init__(self) -> None:
         # A stack of execution contexts: from global to local ones when going into a
         # function or if/while block.
@@ -36,6 +32,15 @@ class _Interpreter(Visitor):
 
     def visit_Boolean(self, node: Boolean) -> bool:
         return node.value
+
+    def visit_Name(self, node: Name) -> _DataTypes:
+        ctx = self._curr_ctx()
+        if node.value in ctx.variables:
+            return ctx.variables[node.value]
+        if node.value in ctx.constants:
+            return ctx.constants[node.value]
+
+        raise WabbitRuntimeError(f"Undefined variable '{node.value}'")
 
     def visit_PrintStatement(self, node: PrintStatement) -> None:
         res = self.visit(node.value)
@@ -83,6 +88,21 @@ class _Interpreter(Visitor):
             case _:
                 raise WabbitRuntimeError(f"Unknown unary operator '{node.operation}'")
 
+    def visit_LogicalOp(self, node: LogicalOp) -> bool:
+        left = self.visit(node.left)
+        right = self.visit(node.right)
+        match node.operation:
+            case "==":
+                return left == right
+            case ">":
+                return left > right
+            case "<":
+                return left < right
+            case "&&":
+                return left and right
+            case "||":
+                return left or right
+
     def visit_ParenExpr(self, node: ParenExpr) -> t.Any:
         return self.visit(node.value)
 
@@ -98,12 +118,49 @@ class _Interpreter(Visitor):
 
         variables[var_name] = _default_var_type(node)
 
+    def visit_ConstDecl(self, node: ConstDecl) -> t.Any:
+        constants = self._curr_ctx().constants
+        var_name = node.name.value
+        if var_name in constants:
+            raise WabbitRuntimeError("Constant '{var_name}' was already declared.")
+
+        constants[var_name] = self.visit(node.value)
+
     def visit_Assignment(self, node: Assignment) -> t.Any:
         assert isinstance(node.left, Name)
         var_name = node.left.value
 
         value = self.visit(node.right)
+        # TODO(povilas): test if var_name exists
+        # TODO(povilas): test if var_name is not a constat
         self._curr_ctx().variables[var_name] = value
+
+    def visit_IfElse(self, node: IfElse) -> None:
+        test_res = self.visit(node.test)
+        if type(test_res) is not bool:
+            raise WabbitRuntimeError(
+                f"If condition mus evaluate to boolean. Rather it was '{type(test_res)}'"
+            )
+
+        if test_res:
+            self.visit(node.body)
+        elif else_body := node.else_body:
+            self.visit(else_body)
+
+    def visit_While(self, node: While) -> None:
+        while True:
+            test_res = self.visit(node.test)
+            if type(test_res) is not bool:
+                raise WabbitRuntimeError(
+                    f"If condition mus evaluate to boolean. Rather it was '{type(test_res)}'"
+                )
+
+            if test_res:
+                self.visit(node.body)
+            else:
+                break
+
+    # TODO(povilas): function def and call
 
     def _curr_ctx(self) -> "_ExecCtx":
         assert (
@@ -113,10 +170,11 @@ class _Interpreter(Visitor):
 
 
 class _ExecCtx(BaseModel):
-    variables: dict[str, int | float | bool | str] = {}
+    variables: dict[str, _DataTypes] = {}
+    constants: dict[str, _DataTypes] = {}
 
 
-def _default_var_type(node: VarDecl) -> int | float | bool | str:
+def _default_var_type(node: VarDecl) -> _DataTypes:
     match node.type_:
         case Type(name="int"):
             return 0
