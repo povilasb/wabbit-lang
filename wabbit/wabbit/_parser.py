@@ -132,28 +132,66 @@ def _parse_expression_as_statement(tokens: "_TokenStream") -> ExprAsStatement:
     return ExprAsStatement(expr=expr)
 
 
-def _parse_name(tokens: "_TokenStream") -> Name:
-    t = tokens.expect("NAME")
-    return Name(location=t.pos, value=t.value)
-
-
 def _parse_type(tokens: "_TokenStream") -> Type:
     t = tokens.expect("NAME")
     return Type(location=t.pos, name=t.value)
 
 
 def _parse_expression(tokens: "_TokenStream") -> Expression:
-    if tokens.peek("INTEGER"):
-        val = _parse_integer(tokens)
-    else:
-        raise WabbitSyntaxError("Unexpected token in expression", tokens.current())
+    factor1 = _parse_factor(tokens)
 
-    return val
+    if tokens.peek_one_of("MULTIPLY", "DIVIDE"):
+        return _parse_binop(tokens, factor1)
+
+    return factor1
+
+
+def _parse_binop(tokens: "_TokenStream", factor1: Expression) -> Expression:
+    tok_op = tokens.expect_one_of("MULTIPLY", "DIVIDE")
+    factor2 = _parse_factor(tokens)
+    return BinOp(
+        location=factor1.location, operation=tok_op.value, left=factor1, right=factor2
+    )
+
+
+def _parse_factor(tokens: "_TokenStream") -> Expression:
+    if tokens.peek("INTEGER"):
+        return _parse_integer(tokens)
+    elif tokens.peek("FLOAT"):
+        return _parse_float(tokens)
+    elif tokens.peek("TRUE"):
+        return _parse_true(tokens)
+    elif tokens.peek("FALSE"):
+        return _parse_false(tokens)
+    elif tokens.peek("NAME"):
+        return _parse_name(tokens)
+    else:
+        raise WabbitSyntaxError("Unexpected token for factor", tokens.current())
+
+
+def _parse_name(tokens: "_TokenStream") -> Name:
+    t = tokens.expect("NAME")
+    return Name(location=t.pos, value=t.value)
 
 
 def _parse_integer(tokens: "_TokenStream") -> Integer:
     t = tokens.expect("INTEGER")
     return Integer(location=t.pos, value=t.value)
+
+
+def _parse_float(tokens: "_TokenStream") -> Float:
+    t = tokens.expect("FLOAT")
+    return Float(location=t.pos, value=t.value)
+
+
+def _parse_true(tokens: "_TokenStream") -> Boolean:
+    t = tokens.expect("TRUE")
+    return Boolean(location=t.pos, value=True)
+
+
+def _parse_false(tokens: "_TokenStream") -> Boolean:
+    t = tokens.expect("FALSE")
+    return Boolean(location=t.pos, value=False)
 
 
 class _TokenStream:
@@ -168,10 +206,26 @@ class _TokenStream:
         if self.current().type == toktype:
             return self._tokens[self._curr_token]
 
+    def peek_one_of(self, *tok_types: TokenType) -> Token | None:
+        if self.eof():
+            return None
+
+        if self.current().type in tok_types:
+            return self._tokens[self._curr_token]
+
     def expect(self, toktype: TokenType) -> Token:
         if self.current().type != toktype:
             raise WabbitSyntaxError(
                 f"Expected token '{toktype}' but was '{self.current().type}'"
+            )
+
+        self._curr_token += 1
+        return self._tokens[self._curr_token - 1]  # Return the matched token
+
+    def expect_one_of(self, *tok_types: TokenType) -> Token:
+        if not self.current().type in tok_types:
+            raise WabbitSyntaxError(
+                f"Expected token one of '{tok_types}' but was '{self.current().type}'"
             )
 
         self._curr_token += 1
