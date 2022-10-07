@@ -67,11 +67,15 @@ class _Interpreter(Visitor):
             case "/":
                 return val1.div(val2)
 
-    def visit_UnaryOp(self, node: UnaryOp) -> t.Any:
+    def visit_UnaryOp(self, node: UnaryOp) -> "_DataType":
         match node.operation:
             case "-":
                 val = self.visit(node.operand)
                 return val.unary_minus()
+
+            case "+":
+                val = self.visit(node.operand)
+                return val.unary_plus()
 
             case "!":
                 val = self.visit(node.operand)
@@ -80,20 +84,28 @@ class _Interpreter(Visitor):
             case _:
                 raise WabbitRuntimeError(f"Unknown unary operator '{node.operation}'")
 
-    def visit_LogicalOp(self, node: LogicalOp) -> bool:
+    def visit_LogicalOp(self, node: LogicalOp) -> "_DataType":
         left = self.visit(node.left)
         right = self.visit(node.right)
         match node.operation:
             case "==":
-                return left == right
+                return left.cmp_eq(right)
+            case "!=":
+                return left.cmp_not_eq(right)
             case ">":
-                return left > right
+                return left.cmp_more(right)
+            case ">=":
+                return left.cmp_more_eq(right)
             case "<":
-                return left < right
+                return left.cmp_less(right)
+            case "<=":
+                return left.cmp_less_eq(right)
             case "&&":
-                return left and right
+                return left.logical_and(right)
             case "||":
-                return left or right
+                return left.logical_or(right)
+            case _:
+                raise RuntimeError("not possible")
 
     def visit_ParenExpr(self, node: ParenExpr) -> t.Any:
         return self.visit(node.value)
@@ -105,23 +117,28 @@ class _Interpreter(Visitor):
     def visit_ExprAsStatement(self, node: ExprAsStatement) -> None:
         self.visit(node.expr)
 
-    def visit_VarDecl(self, node: VarDecl) -> t.Any:
-        variables = self._curr_ctx().variables
+    def visit_VarDecl(self, node: VarDecl) -> None:
         var_name = node.name.value
-        if var_name in variables:
+        variables = self._curr_ctx().variables
+        if var_name in variables or var_name in self._curr_ctx().constants:
             raise WabbitRuntimeError("Variable '{var_name}' was already declared.")
 
-        variables[var_name] = _default_var_type(node)
+        if node.value:
+            val = self.visit(node.value)
+        else:
+            val = _default_var_type(node)
+
+        variables[var_name] = val
 
     def visit_ConstDecl(self, node: ConstDecl) -> t.Any:
-        variables = self._curr_ctx().variables
+        constants = self._curr_ctx().constants
         var_name = node.name.value
-        if var_name in variables:
+        if var_name in constants or var_name in self._curr_ctx().variables:
             raise WabbitRuntimeError("Constant '{var_name}' was already declared.")
 
-        variables[var_name] = self.visit(node.value)
+        constants[var_name] = self.visit(node.value)
 
-    def visit_Assignment(self, node: Assignment) -> t.Any:
+    def visit_Assignment(self, node: Assignment) -> "_DataType":
         assert isinstance(node.left, Name)
         var_name = node.left.value
 
@@ -130,14 +147,16 @@ class _Interpreter(Visitor):
         # TODO(povilas): test if var_name is not a constat
         self._curr_ctx().variables[var_name] = value
 
+        return value
+
     def visit_IfElse(self, node: IfElse) -> None:
         test_res = self.visit(node.test)
-        if type(test_res) is not bool:
+        if type(test_res) is not _BooleanVar:
             raise WabbitRuntimeError(
-                f"If condition mus evaluate to boolean. Rather it was '{type(test_res)}'"
+                f"If condition mus evaluate to boolean. Rather it was '{test_res}'"
             )
 
-        if test_res:
+        if test_res.value:
             self.visit(node.body)
         elif else_body := node.else_body:
             self.visit(else_body)
@@ -145,12 +164,12 @@ class _Interpreter(Visitor):
     def visit_While(self, node: While) -> None:
         while True:
             test_res = self.visit(node.test)
-            if type(test_res) is not bool:
+            if type(test_res) is not _BooleanVar:
                 raise WabbitRuntimeError(
                     f"If condition mus evaluate to boolean. Rather it was '{type(test_res)}'"
                 )
 
-            if test_res:
+            if test_res.value:
                 self.visit(node.body)
             else:
                 break
@@ -196,23 +215,26 @@ class _DataType:
     def unary_minus(self) -> _DataTypes:
         raise _UnsupportedOperation(self.type_, "-x")
 
+    def unary_plus(self) -> _DataTypes:
+        raise _UnsupportedOperation(self.type_, "+x")
+
     def cmp_eq(self, other: "_DataType") -> _DataTypes:
-        return self.value == self._assert_same_type(other).value
+        return _BooleanVar(self.value == self._assert_same_type(other).value)
 
     def cmp_not_eq(self, other: "_DataType") -> _DataTypes:
-        return self.value != self._assert_same_type(other).value
+        return _BooleanVar(self.value != self._assert_same_type(other).value)
 
     def cmp_less(self, other: "_DataType") -> _DataTypes:
-        return self.value < self._assert_same_type(other).value
+        return _BooleanVar(self.value < self._assert_same_type(other).value)
 
     def cmp_less_eq(self, other: "_DataType") -> _DataTypes:
-        return self.value <= self._assert_same_type(other).value
+        return _BooleanVar(self.value <= self._assert_same_type(other).value)
 
     def cmp_more(self, other: "_DataType") -> _DataTypes:
-        return self.value > self._assert_same_type(other).value
+        return _BooleanVar(self.value > self._assert_same_type(other).value)
 
     def cmp_more_eq(self, other: "_DataType") -> _DataTypes:
-        return self.value >= self._assert_same_type(other).value
+        return _BooleanVar(self.value >= self._assert_same_type(other).value)
 
     def logical_not(self) -> _DataTypes:
         raise _UnsupportedOperation(self.type_, "!")
@@ -247,6 +269,9 @@ class _IntegerVar(_DataType):
     def unary_minus(self) -> "_IntegerVar":
         return type(self)(-self.value)
 
+    def unary_plus(self) -> "_IntegerVar":
+        return self
+
 
 class _FloatVar(_DataType):
     type_ = float
@@ -257,6 +282,9 @@ class _FloatVar(_DataType):
 
     def unary_minus(self) -> "_FloatVar":
         return type(self)(-self.value)
+
+    def unary_plus(self) -> "_FloatVar":
+        return self
 
 
 class _BooleanVar(_DataType):
