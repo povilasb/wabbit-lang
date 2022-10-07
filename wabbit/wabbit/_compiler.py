@@ -207,6 +207,7 @@ class Compiler(Visitor):
     def visit_IfElse(self, node: IfElse) -> t.Any:
         test_res = self.visit(node.test)
 
+        # TODO(povilas): self._curr_func()?
         then_block = self._next_block(self._main_func)
         else_block = self._next_block(self._main_func) if node.else_body else None
         merge_block = self._next_block(self._main_func)
@@ -223,6 +224,37 @@ class Compiler(Visitor):
             self._ir_builder.branch(merge_block)
 
         self._ir_builder.position_at_end(merge_block)
+
+    def visit_While(self, node: While) -> t.Any:
+        """
+        Generates code like this:
+
+            while true {
+                if test condition {
+                    goto loop_body
+                } else {
+                    goto loop_exit
+                }
+
+                # loop_body
+            }
+            # loop_exit
+        """
+        loop_body_block = self._next_block(self._main_func)
+        loop_exit_block = self._next_block(self._main_func)
+        loop_test_block = self._next_block(self._main_func)
+
+        # Seems like we always need to branch into the label.
+        self._ir_builder.branch(loop_test_block)
+        self._ir_builder.position_at_end(loop_test_block)
+        test_res = self.visit(node.test)
+        self._ir_builder.cbranch(test_res, loop_body_block, loop_exit_block)
+
+        self._ir_builder.position_at_end(loop_body_block)
+        self.visit(node.body)
+        self._ir_builder.branch(loop_test_block)
+
+        self._ir_builder.position_at_end(loop_exit_block)
 
     def visit_Statements(self, node: Statements) -> None:
         for n in node.nodes:
