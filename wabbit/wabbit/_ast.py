@@ -90,8 +90,8 @@ class BinOp(Expression):
     """Binary operation."""
 
     operation: t.Literal["+"] | t.Literal["-"] | t.Literal["*"] | t.Literal["/"]
-    left: Node
-    right: Node
+    left: Expression
+    right: Expression
 
     @classmethod
     def add(cls, l: Node, r: Node) -> "BinOp":

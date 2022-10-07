@@ -324,6 +324,6 @@ def _default_var_type(node: VarDecl) -> _DataType:
         case Type(name="bool"):
             return _BooleanVar.default()
         case Type(name="char"):
-            assert False, f"Unknown variable type: {node.type_}"
+            return _CharVar.default()
         case _:
             assert False, f"Unknown variable type: {node.type_}"
