@@ -77,6 +77,8 @@ class Compiler(Visitor):
                 var = self._ir_builder.alloca(_TInt, name=var_name)
             elif val.type == _TFloat:
                 var = self._ir_builder.alloca(_TFloat, name=var_name)
+            elif val.type == _TChar:
+                var = self._ir_builder.alloca(_TChar, name=var_name)
             else:
                 assert False
         else:
@@ -86,6 +88,8 @@ class Compiler(Visitor):
                     var = self._ir_builder.alloca(_TInt, name=var_name)
                 case Type(name="float"):
                     var = self._ir_builder.alloca(_TFloat, name=var_name)
+                case Type(name="char"):
+                    var = self._ir_builder.alloca(_TBool, name=var_name)
                 case Type(name="bool"):
                     var = self._ir_builder.alloca(_TBool, name=var_name)
                 case _:
@@ -102,6 +106,8 @@ class Compiler(Visitor):
             var = self._ir_builder.alloca(_TInt, name=var_name)
         elif val.type == _TFloat:
             var = self._ir_builder.alloca(_TFloat, name=var_name)
+        elif val.type == _TChar:
+            var = self._ir_builder.alloca(_TChar, name=var_name)
         else:
             assert False
 
@@ -277,9 +283,9 @@ def _default_var_type(node: VarDecl) -> ir.Value:
             return ir.Constant(_TInt, "0")
         case Type(name="float"):
             return ir.Constant(_TFloat, "0.0")
-        # case Type(name="bool"):
-        #     return _BooleanVar.default()
-        # case Type(name="char"):
-        #     return _CharVar.default()
+        case Type(name="bool"):
+            return ir.Constant(_TBool, "0")
+        case Type(name="char"):
+            return ir.Constant(_TChar, "0")
         case _:
             assert False, f"Unknown variable type: {node.type_}"
