@@ -39,6 +39,9 @@ class _Interpreter(Visitor):
     def visit_Boolean(self, node: Boolean) -> "_BooleanVar":
         return _BooleanVar(node.value)
 
+    def visit_Character(self, node: Character) -> "_CharVar":
+        return _CharVar(node.value)
+
     def visit_Name(self, node: Name) -> "_DataType":
         ctx = self._curr_ctx()
         if node.value in ctx.variables:
@@ -51,7 +54,7 @@ class _Interpreter(Visitor):
     def visit_PrintStatement(self, node: PrintStatement) -> None:
         res = self.visit(node.value)
         # TODO(povilas): assert type _DataType
-        print(res.value)
+        print(res.value, end="")
 
     def visit_BinOp(self, node: BinOp) -> t.Any:
         val1 = self.visit(node.left)
@@ -302,6 +305,14 @@ class _BooleanVar(_DataType):
 
     def logical_or(self, other: "_DataType") -> "_BooleanVar":
         return type(self)(self.value or self._assert_same_type(other).value)
+
+
+class _CharVar(_DataType):
+    type_ = str
+
+    @classmethod
+    def default(cls) -> "_CharVar":
+        return cls("\0")
 
 
 def _default_var_type(node: VarDecl) -> _DataType:

@@ -267,6 +267,8 @@ def _parse_false(tokens: "_TokenStream") -> Boolean:
 def _parse_character(tokens: "_TokenStream") -> Character:
     t = tokens.expect("CHAR")
     value = t.value[1:-1]  # 'a' -> a
+    if value == "\\n":
+        value = "\n"
     return Character(location=t.pos, value=value)
 
 
