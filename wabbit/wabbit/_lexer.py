@@ -78,6 +78,9 @@ def tokenize(text: str) -> list[Token]:
         elif m := match_digits(text, pos):
             tokens.append(Token("INTEGER", m, pos))
 
+        elif m := _match_char(text, pos):
+            tokens.append(Token("CHAR", m, pos))
+
         elif m := match_symbol(text, pos):
             tokens.append(Token(_SYMBOL_TOKENS[m], m, pos))
 
@@ -105,6 +108,28 @@ assert match_digits("abc") == ""  # Doesn't start with digit
 assert match_digits("acb123") == ""
 assert match_digits("123 abc") == "123"
 assert match_digits("123abc456") == "123"  # Stops with first non-digit
+
+
+def _match_char(text: str, start: int = 0) -> str:
+    n = start
+    if n >= len(text):
+        return ""
+
+    if text[n] != "'":
+        return ""
+
+    n += 1
+    while n < len(text) and text[n] != "'":
+        n += 1
+
+    if text[n] == "'":
+        return text[start : n + 1]
+
+    return ""
+
+
+assert _match_char("'x'") == "'x'"
+assert _match_char("'\\n'") == "'\\n'"
 
 
 def match_name(text: str, start: int = 0) -> str:

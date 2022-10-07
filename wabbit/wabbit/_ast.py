@@ -69,6 +69,10 @@ class Boolean(Expression):
     value: bool
 
 
+class Character(Expression):
+    value: str
+
+
 class Type(Node):
     name: t.Literal["int"] | t.Literal["float"] | t.Literal["bool"] | t.Literal["char"]
 
@@ -248,6 +252,9 @@ class Visitor:
         raise RuntimeError("Not implemented")
 
     def visit_Boolean(self, node: Boolean) -> t.Any:
+        raise RuntimeError("Not implemented")
+
+    def visit_Character(self, node: Character) -> t.Any:
         raise RuntimeError("Not implemented")
 
     def visit_Type(self, node: Type) -> t.Any:

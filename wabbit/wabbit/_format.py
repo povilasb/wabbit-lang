@@ -29,6 +29,9 @@ class _FormatVisitor(Visitor):
     def visit_Boolean(self, node: Boolean) -> str:
         return "true" if node.value else "false"
 
+    def visit_Character(self, node: Character) -> str:
+        return f"'{node.value}'"
+
     def visit_Name(self, node: Name) -> str:
         return node.value
 

@@ -224,6 +224,8 @@ def _parse_factor(tokens: "_TokenStream") -> Expression:
         return _parse_true(tokens)
     elif tokens.peek("FALSE"):
         return _parse_false(tokens)
+    elif tokens.peek("CHAR"):
+        return _parse_character(tokens)
     elif tokens.peek("NAME"):
         return _parse_name(tokens)
     elif tokens.peek_one_of("SUB", "ADD", "LOGICAL_NOT"):
@@ -260,6 +262,12 @@ def _parse_true(tokens: "_TokenStream") -> Boolean:
 def _parse_false(tokens: "_TokenStream") -> Boolean:
     t = tokens.expect("FALSE")
     return Boolean(location=t.pos, value=False)
+
+
+def _parse_character(tokens: "_TokenStream") -> Character:
+    t = tokens.expect("CHAR")
+    value = t.value[1:-1]  # 'a' -> a
+    return Character(location=t.pos, value=value)
 
 
 def _parse_unaryop(tokens: "_TokenStream") -> UnaryOp:
