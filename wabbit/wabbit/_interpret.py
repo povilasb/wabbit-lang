@@ -29,6 +29,7 @@ class _Interpreter(Visitor):
         # A stack of execution contexts: from global to local ones when going into a
         # function or if/while block.
         self._exec_ctx = [_ExecCtx()]
+        # TODO(povilas): move functions to global context
 
     def visit_Integer(self, node: Integer) -> "_IntegerVar":
         return _IntegerVar(int(node.value))
@@ -52,7 +53,7 @@ class _Interpreter(Visitor):
         raise WabbitRuntimeError(f"Undefined variable '{node.value}'")
 
     def visit_PrintStatement(self, node: PrintStatement) -> None:
-        res = self.visit(node.value)
+        res: _DataType = self.visit(node.value)
         # TODO(povilas): assert type _DataType
         print(res.value, end="")
 
@@ -113,9 +114,13 @@ class _Interpreter(Visitor):
     def visit_ParenExpr(self, node: ParenExpr) -> t.Any:
         return self.visit(node.value)
 
-    def visit_Statements(self, node: Statements) -> None:
+    def visit_Statements(self, node: Statements) -> t.Any:
+        res = None
         for s in node.nodes:
-            self.visit(s)
+            res = self.visit(s)
+
+        # This is only to cater a `return` statement.
+        return res
 
     def visit_ExprAsStatement(self, node: ExprAsStatement) -> None:
         self.visit(node.expr)
@@ -133,7 +138,7 @@ class _Interpreter(Visitor):
 
         variables[var_name] = val
 
-    def visit_ConstDecl(self, node: ConstDecl) -> t.Any:
+    def visit_ConstDecl(self, node: ConstDecl) -> None:
         constants = self._curr_ctx().constants
         var_name = node.name.value
         if var_name in constants or var_name in self._curr_ctx().variables:
@@ -141,13 +146,47 @@ class _Interpreter(Visitor):
 
         constants[var_name] = self.visit(node.value)
 
+    def visit_FuncArg(self, farg_node: FuncArg) -> "_VarDef":
+        return _VarDef(type_=_var_type(farg_node.type_), name=farg_node.name.value)
+
+    def visit_FuncDef(self, func_def: FuncDef) -> None:
+        args = [self.visit_FuncArg(a) for a in func_def.args]
+        ret_type = _var_type(func_def.return_type)
+        func_name = func_def.name.value
+        f = _Function(name=func_name, args=args, ret_type=ret_type, body=func_def.body)
+        self._curr_ctx().functions[func_name] = f
+
+    def visit_FuncCall(self, callf: FuncCall) -> t.Any:
+        func = self._curr_ctx().functions[callf.name.value]
+
+        # TODO(povilas):
+        # 1. create new context
+        # 2. put call args into that context
+        # 3. visit the func.body
+        # 4. pop func ctx
+
+        func_ctx = _ExecCtx()
+        func_ctx.functions = self._curr_ctx().functions
+        for argi, arg in enumerate(callf.args):
+            arg_value = self.visit(arg)
+            func_ctx.variables[func.args[argi].name] = arg_value
+
+        self._exec_ctx.append(func_ctx)
+
+        # Each function should have a return statement last.
+        res = self.visit(func.body)
+        self._exec_ctx.pop()
+        return res
+
+    def visit_Return(self, node: Return) -> _DataTypes:
+        res = self.visit(node.value)
+        return res
+
     def visit_Assignment(self, node: Assignment) -> "_DataType":
         assert isinstance(node.left, Name)
         var_name = node.left.value
 
         value = self.visit(node.right)
-        # TODO(povilas): test if var_name exists
-        # TODO(povilas): test if var_name is not a constat
         self._curr_ctx().variables[var_name] = value
 
         return value
@@ -177,8 +216,6 @@ class _Interpreter(Visitor):
             else:
                 break
 
-    # TODO(povilas): function def and call
-
     def _curr_ctx(self) -> "_ExecCtx":
         assert (
             len(self._exec_ctx) > 0
@@ -188,7 +225,9 @@ class _Interpreter(Visitor):
 
 class _ExecCtx(BaseModel):
     variables: dict[str, "_DataType"] = {}
+    # TODO(povilas): rm and do const checking before interpreting
     constants: dict[str, "_DataType"] = {}
+    functions: dict[str, "_Function"] = {}
 
 
 class _DataType:
@@ -315,6 +354,24 @@ class _CharVar(_DataType):
         return cls("\0")
 
 
+class _VarDef(BaseModel):
+    # TODO(povilas): I'm using the in | float | bool ... types here
+    # But all I really need is some placeholders like TInt that I could later map
+    # To the interpreted environment type like 'int'.
+    type_: type[_DataTypes]
+    name: str
+
+
+class _Function(BaseModel):
+    """Wabbit functions are not first class citizens and thus do not derive from
+    _DataType."""
+
+    name: str
+    args: list[_VarDef]
+    ret_type: type[_DataTypes]
+    body: Statements
+
+
 def _default_var_type(node: VarDecl) -> _DataType:
     match node.type_:
         case Type(name="int"):
@@ -327,3 +384,17 @@ def _default_var_type(node: VarDecl) -> _DataType:
             return _CharVar.default()
         case _:
             assert False, f"Unknown variable type: {node.type_}"
+
+
+def _var_type(node: Type) -> type[_DataTypes]:
+    match node:
+        case Type(name="int"):
+            return int
+        case Type(name="float"):
+            return float
+        case Type(name="bool"):
+            return bool
+        case Type(name="char"):
+            return str
+        case _:
+            assert False, f"Unknown variable type: {node}"

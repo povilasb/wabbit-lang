@@ -43,6 +43,10 @@ def _parse_statement(tokens: "_TokenStream") -> Statement:
         return _parse_if_statement(tokens)
     elif tokens.peek("WHILE"):
         return _parse_while_statement(tokens)
+    elif tokens.peek("FUNC"):
+        return _parse_func_def(tokens)
+    elif tokens.peek("RETURN"):
+        return _parse_return_statement(tokens)
     else:
         return _parse_expression_as_statement(tokens)
 
@@ -112,6 +116,13 @@ def _parse_while_statement(tokens: "_TokenStream") -> While:
     test = _parse_expression(tokens)
     body = _parse_statements_block(tokens)
     return While(location=t1.pos, test=test, body=body)
+
+
+def _parse_return_statement(tokens: "_TokenStream") -> Return:
+    t1 = tokens.expect("RETURN")
+    ret_val = _parse_expression(tokens)
+    tokens.expect("SEMICOLON")
+    return Return(location=t1.pos, value=ret_val)
 
 
 def _parse_statements_block(tokens: "_TokenStream") -> Statements:
@@ -226,6 +237,8 @@ def _parse_factor(tokens: "_TokenStream") -> Expression:
         return _parse_false(tokens)
     elif tokens.peek("CHAR"):
         return _parse_character(tokens)
+    elif tokens.peek_all("NAME", "OPEN_PARENS"):
+        return _parse_func_call(tokens)
     elif tokens.peek("NAME"):
         return _parse_name(tokens)
     elif tokens.peek_one_of("SUB", "ADD", "LOGICAL_NOT"):
@@ -236,6 +249,7 @@ def _parse_factor(tokens: "_TokenStream") -> Expression:
         tokens.expect("CLOSE_PARENS")
         return factor
     else:
+        tokens.print_debug_info()
         raise WabbitSyntaxError("Unexpected token for factor", tokens.current())
 
 
@@ -270,6 +284,47 @@ def _parse_character(tokens: "_TokenStream") -> Character:
     if value == "\\n":
         value = "\n"
     return Character(location=t.pos, value=value)
+
+
+def _parse_func_def(tokens: "_TokenStream") -> FuncDef:
+    t1 = tokens.expect("FUNC")
+    func_name = _parse_name(tokens)
+
+    tokens.expect("OPEN_PARENS")
+    func_args = []
+    while not tokens.peek("CLOSE_PARENS"):
+        func_args.append(_parse_func_arg(tokens))
+        if tokens.peek("COMMA"):
+            tokens.expect("COMMA")
+    tokens.expect("CLOSE_PARENS")
+
+    ret_type = _parse_type(tokens)
+    body = _parse_statements_block(tokens)
+
+    return FuncDef(
+        location=t1.pos, name=func_name, args=func_args, return_type=ret_type, body=body
+    )
+
+
+def _parse_func_arg(tokens: "_TokenStream") -> FuncArg:
+    name = _parse_name(tokens)
+    type_ = _parse_type(tokens)
+    return FuncArg(location=name.location, name=name, type_=type_)
+
+
+def _parse_func_call(tokens: "_TokenStream") -> FuncCall:
+    func_name = _parse_name(tokens)
+    tokens.expect("OPEN_PARENS")
+
+    args = []
+    while not tokens.peek("CLOSE_PARENS"):
+        args.append(_parse_expression(tokens))
+        if tokens.peek("COMMA"):
+            tokens.expect("COMMA")
+
+    tokens.expect("CLOSE_PARENS")
+
+    return FuncCall(location=func_name.location, name=func_name, args=args)
 
 
 def _parse_unaryop(tokens: "_TokenStream") -> UnaryOp:
@@ -307,8 +362,26 @@ class _TokenStream:
         if self.current().type in tok_types:
             return self._tokens[self._curr_token]
 
+    def peek_all(self, *tok_types: TokenType) -> Token | None:
+        if self.eof():
+            return None
+
+        if self._curr_token + len(tok_types) >= len(self._tokens):
+            return None
+
+        end = self._curr_token + len(tok_types)
+        all_match = all(
+            [
+                tok_exp_type[0].type == tok_exp_type[1]
+                for tok_exp_type in zip(self._tokens[self._curr_token : end], tok_types)
+            ]
+        )
+        if all_match:
+            return self._tokens[self._curr_token]
+
     def expect(self, toktype: TokenType) -> Token:
         if self.current().type != toktype:
+            self.print_debug_info()
             raise WabbitSyntaxError(
                 f"Expected token '{toktype}' but was '{self.current()}'"
             )
@@ -330,3 +403,14 @@ class _TokenStream:
 
     def eof(self) -> bool:
         return self._curr_token >= len(self._tokens)
+
+    def print_debug_info(self) -> None:
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("Last 5 tokens finished parsing:")
+        start = max(self._curr_token - 5, 0)
+        print(self._tokens[start : self._curr_token])
+        print("-------------------------------")
+        print("Next 5 tokens to parse:")
+        end = min(self._curr_token + 5, len(self._tokens))
+        print(self._tokens[self._curr_token : end])
+        print("-------------------------------")
