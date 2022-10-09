@@ -3,6 +3,8 @@
 Which then we can translate to machine code.
 """
 
+import typing as t
+
 from llvmlite import ir
 
 from ._ast import *
@@ -19,7 +21,10 @@ _TVoid = ir.VoidType()
 # This will be done earlier by another visitor - "type checker".
 class Compiler(Visitor):
     def __init__(self) -> None:
-        self._variables: dict[str, ir.AllocaInstr] = {}
+        self._global_variables: dict[str, ir.AllocaInstr] = {}
+        # Variables declared in the current context - changes when building a function.
+        self._current_variables: dict[str, ir.AllocaInstr] = self._global_variables
+        self._functions: dict[str, ir.Function] = {}
 
         self._mod = ir.Module("wabbit")
         self._main_func = ir.Function(
@@ -83,6 +88,8 @@ class Compiler(Visitor):
                 var = self._curr_builder.alloca(_TFloat, name=var_name)
             elif val.type == _TChar:
                 var = self._curr_builder.alloca(_TChar, name=var_name)
+            if val.type == _TBool:
+                var = self._curr_builder.alloca(_TBool, name=var_name)
             else:
                 assert False
         else:
@@ -100,7 +107,7 @@ class Compiler(Visitor):
                     assert False
 
         self._curr_builder.store(val, var)
-        self._variables[var_name] = var
+        self._current_variables[var_name] = var
 
     def visit_ConstDecl(self, node: ConstDecl) -> None:
         var_name = node.name.value
@@ -116,10 +123,42 @@ class Compiler(Visitor):
             assert False
 
         self._curr_builder.store(val, var)
-        self._variables[var_name] = var
+        self._current_variables[var_name] = var
+
+    def visit_FuncDef(self, func_def: FuncDef) -> None:
+        arg_types = [_var_type(a.type_) for a in func_def.args]
+        ret_type = _var_type(func_def.return_type)
+        func_name = func_def.name.value
+        f = ir.Function(self._mod, ir.FunctionType(ret_type, arg_types), func_name)
+
+        block = self._next_block(f)
+        # So that other visitor methods would build IR instructions into this block.
+        self._curr_builder = ir.IRBuilder(block)
+        self._current_variables = {}
+
+        for i, arg in enumerate(f.args):
+            var_name = func_def.args[i].name.value
+            var = self._curr_builder.alloca(arg.type, name=var_name)
+            self._curr_builder.store(arg, var)
+            self._current_variables[var_name] = var
+
+        self.visit(func_def.body)
+        self._functions[func_name] = f
+
+        self._curr_builder = self._main_builder
+        self._current_variables = self._global_variables
+
+    def visit_Return(self, node: Return) -> t.Any:
+        expr = self.visit(node.value)
+        return self._curr_builder.ret(expr)
+
+    def visit_FuncCall(self, node: FuncCall) -> t.Any:
+        func = self._functions[node.name.value]
+        args = [self.visit(a) for a in node.args]
+        return self._curr_builder.call(func, args)
 
     def visit_Name(self, node: Name):
-        return self._curr_builder.load(self._variables[node.value])
+        return self._curr_builder.load(self._current_variables[node.value])
 
     def visit_BinOp(self, node: BinOp) -> t.Any:
         left = self.visit(node.left)
@@ -209,7 +248,7 @@ class Compiler(Visitor):
         var_name = node.left.value
 
         value = self.visit(node.right)
-        var = self._variables[var_name]
+        var = self._current_variables[var_name]
         self._curr_builder.store(value, var)
 
         return value
@@ -293,3 +332,17 @@ def _default_var_type(node: VarDecl) -> ir.Value:
             return ir.Constant(_TChar, "0")
         case _:
             assert False, f"Unknown variable type: {node.type_}"
+
+
+def _var_type(node: Type) -> ir.Type:
+    match node:
+        case Type(name="int"):
+            return _TInt
+        case Type(name="float"):
+            return _TFloat
+        case Type(name="bool"):
+            return _TBool
+        case Type(name="char"):
+            return _TChar
+        case _:
+            assert False, f"Unknown variable type: {node}"
