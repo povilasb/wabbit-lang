@@ -159,12 +159,6 @@ class _Interpreter(Visitor):
     def visit_FuncCall(self, callf: FuncCall) -> t.Any:
         func = self._curr_ctx().functions[callf.name.value]
 
-        # TODO(povilas):
-        # 1. create new context
-        # 2. put call args into that context
-        # 3. visit the func.body
-        # 4. pop func ctx
-
         func_ctx = _ExecCtx()
         func_ctx.functions = self._curr_ctx().functions
         for argi, arg in enumerate(callf.args):
