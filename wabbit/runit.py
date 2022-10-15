@@ -17,12 +17,16 @@ def main(wabbit_file: str, debug: bool = False) -> None:
     interpreter = _Interpreter()
     try:
         interpreter.visit(ast)
-        if debug:
-            print("\n")
-            print("!!!! Interpreter state: !!!!")
-            print(interpreter._exec_ctx[0])
     except WabbitError as e:
-        print("Error:", e)
+        if debug:
+            raise e
+        else:
+            print("Error:", e)
+
+    if debug:
+        print("\n")
+        print("!!!! Interpreter state: !!!!")
+        print(interpreter._exec_ctx[0])
 
 
 if __name__ == "__main__":
