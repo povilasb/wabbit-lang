@@ -1,0 +1,13 @@
+// Demonstrates function calls, loops, conditions, arithmetics, printing, etc.
+
+
+func factorial(n int) int {
+    var f int = 1;
+    while n > 0 {
+        f = f * n;
+        n = n - 1;
+    }
+    return f;
+}
+
+print factorial(5);

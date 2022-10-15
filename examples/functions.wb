@@ -1,0 +1,9 @@
+func add(a int, b int) int {
+   return a + b;
+}
+
+const n1 int = 1;
+const n2 int = 2;
+
+print add(n1, n2);
+print add(1, 2);
