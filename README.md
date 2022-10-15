@@ -127,3 +127,10 @@ location : NAME
 
 type      : NAME
 ```
+
+## References
+
+1. LLVM tutorial: <https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html>
+2. A Compiler explorer: <https://godbolt.org/>
+3. An online book about programming languages: <https://craftinginterpreters.com/>
+4. Visual programming: <https://scratch.mit.edu/>
