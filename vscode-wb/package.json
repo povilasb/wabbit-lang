@@ -1,0 +1,25 @@
+{
+  "name": "wb",
+  "displayName": ".wb",
+  "description": "Syntax highlighting for wabbit-lang",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.72.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "wb",
+      "aliases": ["wabbit", "wb"],
+      "extensions": [".wb"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "wb",
+      "scopeName": "source.wb",
+      "path": "./syntaxes/wb.tmLanguage.json"
+    }]
+  }
+}

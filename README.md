@@ -19,8 +19,9 @@ print factorial(5);
 In this repo you can find:
 
 * a Wabbit parser,
-* interpreter
-* and a compiler (via LLVM).
+* interpreter,
+* a compiler (via LLVM),
+* [syntax highlight for VSCode](vscode-wb).
 
 ## Usage
 
